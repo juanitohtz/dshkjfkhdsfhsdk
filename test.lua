@@ -1,5 +1,5 @@
---[[
-    ESP + Triggerbot (L toggle, V hold) + Kill Button
+--[[ 
+    ESP + Triggerbot (L toggle, V hold) + Kill Button + ESP Settings Tab
     L = Arm/Disarm system (ESP + Trigger)
     Hold V = Triggerbot
     RightShift = Toggle UI visibility
@@ -21,9 +21,11 @@ local Running = true
 local Connections = {}
 
 local ESP = {
-    Enabled = false,      -- visuals
-    Armed = false,        -- system armed (L)
-    Pixels = {}
+    Enabled = false,
+    Armed = false,
+    Pixels = {},
+    FillColor = Color3.fromRGB(255,0,0),
+    OutlineColor = Color3.fromRGB(255,255,255)
 }
 
 local TriggerHeld = false
@@ -41,14 +43,13 @@ local function createUI()
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0,300,0,210)
+    mainFrame.Size = UDim2.new(0,300,0,260)
     mainFrame.Position = UDim2.new(0,20,0,20)
     mainFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
     mainFrame.BorderSizePixel = 0
     mainFrame.Active = true
     mainFrame.Draggable = true
     mainFrame.Parent = screenGui
-
     Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0,8)
 
     local title = Instance.new("TextLabel")
@@ -69,7 +70,7 @@ local function createUI()
     tabBar.Parent = mainFrame
 
     local mainTab = Instance.new("TextButton")
-    mainTab.Size = UDim2.new(0.5,-5,1,0)
+    mainTab.Size = UDim2.new(1/3,-5,1,0)
     mainTab.Position = UDim2.new(0,0,0,0)
     mainTab.BackgroundColor3 = Color3.fromRGB(50,50,50)
     mainTab.TextColor3 = Color3.fromRGB(255,255,255)
@@ -80,8 +81,8 @@ local function createUI()
     Instance.new("UICorner", mainTab).CornerRadius = UDim.new(0,6)
 
     local debugTab = Instance.new("TextButton")
-    debugTab.Size = UDim2.new(0.5,-5,1,0)
-    debugTab.Position = UDim2.new(0.5,5,0,0)
+    debugTab.Size = UDim2.new(1/3,-5,1,0)
+    debugTab.Position = UDim2.new(1/3,5,0,0)
     debugTab.BackgroundColor3 = Color3.fromRGB(35,35,35)
     debugTab.TextColor3 = Color3.fromRGB(200,200,200)
     debugTab.TextScaled = true
@@ -90,9 +91,20 @@ local function createUI()
     debugTab.Parent = tabBar
     Instance.new("UICorner", debugTab).CornerRadius = UDim.new(0,6)
 
+    local settingsTab = Instance.new("TextButton")
+    settingsTab.Size = UDim2.new(1/3,-5,1,0)
+    settingsTab.Position = UDim2.new(2/3,10,0,0)
+    settingsTab.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    settingsTab.TextColor3 = Color3.fromRGB(200,200,200)
+    settingsTab.TextScaled = true
+    settingsTab.Text = "ESP Settings"
+    settingsTab.BorderSizePixel = 0
+    settingsTab.Parent = tabBar
+    Instance.new("UICorner", settingsTab).CornerRadius = UDim.new(0,6)
+
     -- Main content
     local mainContent = Instance.new("Frame")
-    mainContent.Size = UDim2.new(1,-10,1,-70)
+    mainContent.Size = UDim2.new(1,-10,1,-90)
     mainContent.Position = UDim2.new(0,5,0,60)
     mainContent.BackgroundTransparency = 1
     mainContent.Name = "MainContent"
@@ -132,7 +144,7 @@ local function createUI()
 
     -- Debug content
     local debugContent = Instance.new("Frame")
-    debugContent.Size = UDim2.new(1,-10,1,-70)
+    debugContent.Size = UDim2.new(1,-10,1,-90)
     debugContent.Position = UDim2.new(0,5,0,60)
     debugContent.BackgroundTransparency = 1
     debugContent.Name = "DebugContent"
@@ -160,30 +172,108 @@ local function createUI()
     debugInfo.Text = "DISARMED: L off\nARMED: L on\nHOLDING: L on + V held\nLOCKED & FIRING: enemy in center"
     debugInfo.Parent = debugContent
 
-    local function setTab(mainActive)
-        mainContent.Visible = mainActive
-        debugContent.Visible = not mainActive
+    -- ESP SETTINGS TAB
+    local settingsContent = Instance.new("Frame")
+    settingsContent.Size = UDim2.new(1,-10,1,-90)
+    settingsContent.Position = UDim2.new(0,5,0,60)
+    settingsContent.BackgroundTransparency = 1
+    settingsContent.Name = "SettingsContent"
+    settingsContent.Visible = false
+    settingsContent.Parent = mainFrame
 
-        if mainActive then
-            mainTab.BackgroundColor3 = Color3.fromRGB(50,50,50)
-            mainTab.TextColor3 = Color3.fromRGB(255,255,255)
-            debugTab.BackgroundColor3 = Color3.fromRGB(35,35,35)
-            debugTab.TextColor3 = Color3.fromRGB(200,200,200)
-        else
-            mainTab.BackgroundColor3 = Color3.fromRGB(35,35,35)
-            mainTab.TextColor3 = Color3.fromRGB(200,200,200)
-            debugTab.BackgroundColor3 = Color3.fromRGB(50,50,50)
-            debugTab.TextColor3 = Color3.fromRGB(255,255,255)
-        end
+    local fillLabel = Instance.new("TextLabel")
+    fillLabel.Size = UDim2.new(1,-10,0,20)
+    fillLabel.Position = UDim2.new(0,5,0,5)
+    fillLabel.BackgroundTransparency = 1
+    fillLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    fillLabel.TextScaled = true
+    fillLabel.Text = "Fill Color (RGB)"
+    fillLabel.Parent = settingsContent
+
+    local function makeBox(x, y, default)
+        local box = Instance.new("TextBox")
+        box.Size = UDim2.new(0,60,0,25)
+        box.Position = UDim2.new(0,x,0,y)
+        box.BackgroundColor3 = Color3.fromRGB(60,60,60)
+        box.TextColor3 = Color3.fromRGB(255,255,255)
+        box.TextScaled = true
+        box.Text = tostring(default)
+        box.Parent = settingsContent
+        return box
     end
 
-    mainTab.MouseButton1Click:Connect(function() setTab(true) end)
-    debugTab.MouseButton1Click:Connect(function() setTab(false) end)
+    local fillR = makeBox(5,30,255)
+    local fillG = makeBox(75,30,0)
+    local fillB = makeBox(145,30,0)
 
-    return screenGui, mainFrame, espToggle, stateLabel, killButton
+    local outlineLabel = fillLabel:Clone()
+    outlineLabel.Text = "Outline Color (RGB)"
+    outlineLabel.Position = UDim2.new(0,5,0,70)
+    outlineLabel.Parent = settingsContent
+
+    local outR = makeBox(5,95,255)
+    local outG = makeBox(75,95,255)
+    local outB = makeBox(145,95,255)
+
+    -- TAB SWITCHING
+    local function setTab(which)
+        mainContent.Visible = (which == "main")
+        debugContent.Visible = (which == "debug")
+        settingsContent.Visible = (which == "settings")
+
+        mainTab.BackgroundColor3 = (which == "main") and Color3.fromRGB(50,50,50) or Color3.fromRGB(35,35,35)
+        mainTab.TextColor3 = (which == "main") and Color3.fromRGB(255,255,255) or Color3.fromRGB(200,200,200)
+
+        debugTab.BackgroundColor3 = (which == "debug") and Color3.fromRGB(50,50,50) or Color3.fromRGB(35,35,35)
+        debugTab.TextColor3 = (which == "debug") and Color3.fromRGB(255,255,255) or Color3.fromRGB(200,200,200)
+
+        settingsTab.BackgroundColor3 = (which == "settings") and Color3.fromRGB(50,50,50) or Color3.fromRGB(35,35,35)
+        settingsTab.TextColor3 = (which == "settings") and Color3.fromRGB(255,255,255) or Color3.fromRGB(200,200,200)
+    end
+
+    mainTab.MouseButton1Click:Connect(function() setTab("main") end)
+    debugTab.MouseButton1Click:Connect(function() setTab("debug") end)
+    settingsTab.MouseButton1Click:Connect(function() setTab("settings") end)
+
+    return screenGui, mainFrame, espToggle, stateLabel, killButton,
+           fillR, fillG, fillB, outR, outG, outB
 end
 
-local screenGui, mainFrame, espToggle, stateLabel, killButton = createUI()
+local screenGui, mainFrame, espToggle, stateLabel, killButton,
+      fillR, fillG, fillB, outR, outG, outB = createUI()
+
+------------------------------------------------------------------
+-- ESP COLOR UPDATE
+------------------------------------------------------------------
+
+local function UpdateESPColors()
+    local r1 = tonumber(fillR.Text) or 255
+    local g1 = tonumber(fillG.Text) or 0
+    local b1 = tonumber(fillB.Text) or 0
+
+    local r2 = tonumber(outR.Text) or 255
+    local g2 = tonumber(outG.Text) or 255
+    local b2 = tonumber(outB.Text) or 255
+
+    ESP.FillColor = Color3.fromRGB(r1,g1,b1)
+    ESP.OutlineColor = Color3.fromRGB(r2,g2,b2)
+
+    for _, highlight in pairs(ESP.Pixels) do
+        highlight.FillColor = ESP.FillColor
+        highlight.OutlineColor = ESP.OutlineColor
+    end
+end
+
+local function connectBox(box)
+    box.FocusLost:Connect(UpdateESPColors)
+end
+
+connectBox(fillR)
+connectBox(fillG)
+connectBox(fillB)
+connectBox(outR)
+connectBox(outG)
+connectBox(outB)
 
 ------------------------------------------------------------------
 -- ESP FUNCTIONS
@@ -194,9 +284,9 @@ function ESP:CreatePixel(character)
 
     local highlight = Instance.new("Highlight")
     highlight.Name = "ESP_Highlight"
-    highlight.FillColor = Color3.fromRGB(255,0,0)
+    highlight.FillColor = self.FillColor
     highlight.FillTransparency = 0.5
-    highlight.OutlineColor = Color3.fromRGB(255,255,255)
+    highlight.OutlineColor = self.OutlineColor
     highlight.OutlineTransparency = 0
     highlight.Adornee = character
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
@@ -357,34 +447,4 @@ local function DetectCenterTarget()
         if model then
             local playerHit = Players:GetPlayerFromCharacter(model)
             if playerHit and playerHit ~= LocalPlayer then
-                TriggerState = "LOCKED & FIRING"
-
-                -- original behavior: one shot per lock
-                if not clicked then
-                    clicked = true
-                    mouse1press()
-                    task.wait()
-                    mouse1release()
-                end
-
-                return
-            end
-        end
-    end
-
-    TriggerState = "HOLDING"
-    clicked = false
-end
-
-------------------------------------------------------------------
--- MAIN LOOP
-------------------------------------------------------------------
-
-table.insert(Connections, RunService.RenderStepped:Connect(function()
-    if not Running then return end
-    ESP:Update()
-    DetectCenterTarget()
-    if stateLabel then
-        stateLabel.Text = "Trigger state: " .. TriggerState
-    end
-end))
+                TriggerState = "LOCKED
