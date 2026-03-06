@@ -165,7 +165,9 @@ UserInputService.InputBegan:Connect(function(input, gp)
 
     if input.KeyCode == Enum.KeyCode.L then
         ESP.ToggleActive = not ESP.ToggleActive
-        if not ESP.ToggleActive then ESP:ClearAll() end
+        if not ESP.ToggleActive then
+            ESP:ClearAll()
+        end
     end
 
     if input.KeyCode == Enum.KeyCode.V then
@@ -180,12 +182,13 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 ------------------------------------------------------------------
--- TRIGGERBOT (WORKS EVEN IF ESP IS OFF)
+-- TRIGGERBOT (INDEPENDENT OF ESP.ENABLED, WITH WALLCHECK)
 ------------------------------------------------------------------
 
 local clicked = false
 
 local function DetectCenterTarget()
+    -- Only depend on L toggle + V hold
     if not ESP.ToggleActive or not TriggerHeld then
         clicked = false
         return
@@ -202,9 +205,12 @@ local function DetectCenterTarget()
 
     local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
 
-    if result then
-        local model = result.Instance:FindFirstAncestorOfClass("Model")
-        if model and Players:GetPlayerFromCharacter(model) then
+    if result and result.Instance then
+        local part = result.Instance
+        local model = part:FindFirstAncestorOfClass("Model")
+        local playerHit = model and Players:GetPlayerFromCharacter(model)
+
+        if playerHit and playerHit ~= LocalPlayer then
             if not clicked then
                 clicked = true
                 mouse1press()
