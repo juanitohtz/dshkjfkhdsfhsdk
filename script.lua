@@ -87,16 +87,18 @@ function ESP:CreatePixel(character)
     if not root then return end
 
     local highlight = Instance.new("Highlight")
-    highlight.Name = "HRP_ESP"
+    highlight.Name = "PlayerESP"
 
     highlight.Adornee = character
     highlight.FillColor = Color3.fromRGB(255,0,0)
-    highlight.OutlineColor = Color3.fromRGB(255,0,0)
+    highlight.OutlineColor = Color3.fromRGB(255,255,255)
 
-    highlight.FillTransparency = 0.6
+    highlight.FillTransparency = 0.5
     highlight.OutlineTransparency = 0
 
-    highlight.Parent = character
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+
+    highlight.Parent = LocalPlayer.PlayerGui
 
     self.Pixels[character] = {
         root = root,
@@ -121,13 +123,12 @@ end
 function ESP:ClearAll()
 
     for char,data in pairs(self.Pixels) do
+
         if data.highlight then
             data.highlight:Destroy()
         end
-    end
 
-    self.Pixels = {}
-end
+    end
 
     self.Pixels = {}
 end
