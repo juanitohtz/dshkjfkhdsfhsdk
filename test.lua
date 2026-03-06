@@ -235,7 +235,7 @@ local function createUI()
     debugInfo.TextScaled = true
     debugInfo.TextWrapped = true
     -- updated to reflect the 3 main stages
-    debugInfo.Text = "DISARMED: L off\nARMED: L on\nHOLDING: L on + V held\nTARGET: enemy in center"
+    debugInfo.Text = "DISARMED: V not held\nARMED: Ready, V can be held\nHOLDING: V held, scanning\nTARGET: enemy in center"
     debugInfo.Parent = debugContent
 
     -- Settings content
@@ -572,38 +572,30 @@ table.insert(Connections, espToggle.MouseButton1Click:Connect(function()
 end))
 
 ------------------------------------------------------------------
--- INPUT: L (ARM), V (HOLD)
+-- INPUT: L (ARM FOR ESP), V (HOLD FOR TRIGGERBOT)
 ------------------------------------------------------------------
 
 table.insert(Connections, UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
 
     if input.KeyCode == Enum.KeyCode.L then
+        -- L now only arms ESP, not the triggerbot logic
         ESP.Armed = not ESP.Armed
-        if ESP.Armed then
-            TriggerState = "ARMED"
-        else
-            TriggerState = "DISARMED"
-            ESP:ClearAll()
-        end
+        -- keep TriggerState independent so triggerbot can work without L
     end
 
     if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = true
-        if ESP.Armed then
-            TriggerState = "HOLDING"
-        end
+        -- when V is held, we are in HOLDING state (scanner active)
+        TriggerState = "HOLDING"
     end
 end))
 
 table.insert(Connections, UserInputService.InputEnded:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = false
-        if ESP.Armed then
-            TriggerState = "ARMED"
-        else
-            TriggerState = "DISARMED"
-        end
+        -- when V is released, system is ARMED (ready) but not firing
+        TriggerState = "ARMED"
     end
 end))
 
@@ -614,21 +606,17 @@ end))
 local clicked = false
 
 local function DetectCenterTarget()
-    -- DISARMED: system not armed with L
-    if not ESP.Armed then
-        TriggerState = "DISARMED"
-        clicked = false
-        return
-    end
-
-    -- ARMED: L on, but V not held
+    -- if V is not held, we are not scanning, just ARMED/idle
     if not TriggerHeld then
-        TriggerState = "ARMED"
+        -- if nothing has happened yet, keep DISARMED, otherwise ARMED
+        if TriggerState == "DISARMED" then
+            TriggerState = "ARMED"
+        end
         clicked = false
         return
     end
 
-    -- HOLDING: L on + V held, checking for target
+    -- HOLDING: V held, scanning for target
     TriggerState = "HOLDING"
 
     if not Camera then
