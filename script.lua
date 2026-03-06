@@ -168,47 +168,39 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 ------------------------------------------------------------------
--- CROSSHAIR RAYCAST TRIGGERBOT
+-- CROSSHAIR RAYCAST TRIGGERBOT (Reliable Version)
 ------------------------------------------------------------------
 
 local function DetectCenterTarget()
 
     if not MB5Held then return end
 
-    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    local centerX = Camera.ViewportSize.X / 2
+    local centerY = Camera.ViewportSize.Y / 2
 
-    local ray = Camera:ViewportPointToRay(center.X, center.Y)
-    local raycastParams = RaycastParams.new()
+    local ray = Camera:ViewportPointToRay(centerX, centerY)
 
-    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {LocalPlayer.Character}
 
-    local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, raycastParams)
+    local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
 
     if result and result.Instance then
 
-        local hitPart = result.Instance
-        local model = hitPart:FindFirstAncestorOfClass("Model")
+        local part = result.Instance
+        local model = part:FindFirstAncestorOfClass("Model")
 
         if model and Players:GetPlayerFromCharacter(model) then
 
-            VirtualInputManager:SendMouseButtonEvent(
-                center.X,
-                center.Y,
-                0,
-                true,
-                game,
-                0
-            )
+            local character = LocalPlayer.Character
+            if not character then return end
 
-            VirtualInputManager:SendMouseButtonEvent(
-                center.X,
-                center.Y,
-                0,
-                false,
-                game,
-                0
-            )
+            local tool = character:FindFirstChildOfClass("Tool")
+
+            if tool then
+                tool:Activate()
+            end
 
         end
     end
