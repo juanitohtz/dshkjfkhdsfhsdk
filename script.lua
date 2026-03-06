@@ -86,15 +86,17 @@ function ESP:CreatePixel(character)
     local root = character:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
-    -- Create HRP highlight
     local highlight = Instance.new("Highlight")
     highlight.Name = "HRP_ESP"
-    highlight.Adornee = root
+
+    highlight.Adornee = character
     highlight.FillColor = Color3.fromRGB(255,0,0)
     highlight.OutlineColor = Color3.fromRGB(255,0,0)
-    highlight.FillTransparency = 0.4
+
+    highlight.FillTransparency = 0.6
     highlight.OutlineTransparency = 0
-    highlight.Parent = root
+
+    highlight.Parent = character
 
     self.Pixels[character] = {
         root = root,
@@ -108,7 +110,7 @@ function ESP:RemovePixel(character)
 
         local data = self.Pixels[character]
 
-        if data.highlight and data.highlight.Parent then
+        if data.highlight then
             data.highlight:Destroy()
         end
 
@@ -119,12 +121,13 @@ end
 function ESP:ClearAll()
 
     for char,data in pairs(self.Pixels) do
-
-        if data.highlight and data.highlight.Parent then
+        if data.highlight then
             data.highlight:Destroy()
         end
-
     end
+
+    self.Pixels = {}
+end
 
     self.Pixels = {}
 end
