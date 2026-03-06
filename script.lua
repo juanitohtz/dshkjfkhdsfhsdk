@@ -204,7 +204,7 @@ local clicked = false
 
 local function DetectCenterRedPixel()
 
-    if not ESP.Enabled or not ESP.ToggleActive or not MB5Held then
+    if not MB5Held then
         clicked = false
         return
     end
