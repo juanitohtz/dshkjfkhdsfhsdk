@@ -1,5 +1,5 @@
 --[[ 
-    ESP + Triggerbot (L toggle, V hold) + Kill Button + ESP Settings (Photoshop-style) + Resizable UI
+    ESP + Triggerbot (L toggle, V hold) + Kill Button + ESP Settings (HTMLColorCodes-style) + Resizable UI
     L = Arm/Disarm system (ESP + Trigger)
     Hold V = Triggerbot
     RightShift = Toggle UI visibility
@@ -81,24 +81,8 @@ local function RGBToHSV(color)
     return h, s, v
 end
 
-local function ColorToHex(color)
-    local r = math.floor(color.R * 255 + 0.5)
-    local g = math.floor(color.G * 255 + 0.5)
-    local b = math.floor(color.B * 255 + 0.5)
-    return string.format("#%02X%02X%02X", r, g, b)
-end
-
-local function HexToColor(hex)
-    hex = tostring(hex or ""):gsub("#","")
-    if #hex ~= 6 then return Color3.new(1,1,1) end
-    local r = tonumber(hex:sub(1,2),16) or 255
-    local g = tonumber(hex:sub(3,4),16) or 255
-    local b = tonumber(hex:sub(5,6),16) or 255
-    return Color3.fromRGB(r,g,b)
-end
-
 ------------------------------------------------------------------
--- UI (COMPACT, MODULAR STYLE)
+-- UI
 ------------------------------------------------------------------
 
 local screenGui, mainFrame, resizeHandle
@@ -106,7 +90,6 @@ local mainTab, debugTab, settingsTab
 local mainContent, debugContent, settingsContent
 local espToggle, stateLabel, killButton
 local svSquare, hueBar, preview
-local rBox, gBox, bBox, hexBox
 local applyFill, applyOutline
 
 local function createUI()
@@ -271,6 +254,7 @@ local function createUI()
     pickerFrame.Parent = settingsContent
     Instance.new("UICorner", pickerFrame).CornerRadius = UDim.new(0,6)
 
+    -- SV square (like htmlcolorcodes)
     svSquare = Instance.new("Frame")
     svSquare.Size = UDim2.new(0,130,0,130)
     svSquare.Position = UDim2.new(0,10,0,10)
@@ -278,12 +262,64 @@ local function createUI()
     svSquare.BorderSizePixel = 0
     svSquare.Parent = pickerFrame
 
+    -- White overlay (left→right)
+    local whiteOverlay = Instance.new("Frame")
+    whiteOverlay.Size = UDim2.new(1,0,1,0)
+    whiteOverlay.BackgroundTransparency = 1
+    whiteOverlay.BorderSizePixel = 0
+    whiteOverlay.Parent = svSquare
+
+    local whiteGrad = Instance.new("UIGradient")
+    whiteGrad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255,255,255))
+    }
+    whiteGrad.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 1)
+    }
+    whiteGrad.Rotation = 0
+    whiteGrad.Parent = whiteOverlay
+
+    -- Black overlay (top→bottom)
+    local blackOverlay = Instance.new("Frame")
+    blackOverlay.Size = UDim2.new(1,0,1,0)
+    blackOverlay.BackgroundTransparency = 1
+    blackOverlay.BorderSizePixel = 0
+    blackOverlay.Parent = svSquare
+
+    local blackGrad = Instance.new("UIGradient")
+    blackGrad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0,0,0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0,0,0))
+    }
+    blackGrad.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(1, 0)
+    }
+    blackGrad.Rotation = 90
+    blackGrad.Parent = blackOverlay
+
+    -- Hue bar (rainbow)
     hueBar = Instance.new("Frame")
     hueBar.Size = UDim2.new(0,20,0,130)
     hueBar.Position = UDim2.new(0,150,0,10)
     hueBar.BackgroundColor3 = Color3.fromRGB(255,0,0)
     hueBar.BorderSizePixel = 0
     hueBar.Parent = pickerFrame
+
+    local hueGrad = Instance.new("UIGradient")
+    hueGrad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255,0,0)),
+        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255,255,0)),
+        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0,255,0)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0,255,255)),
+        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0,0,255)),
+        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255,0,255)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255,0,0))
+    }
+    hueGrad.Rotation = 90
+    hueGrad.Parent = hueBar
 
     preview = Instance.new("Frame")
     preview.Size = UDim2.new(0,40,0,40)
@@ -293,47 +329,9 @@ local function createUI()
     preview.Parent = pickerFrame
     Instance.new("UICorner", preview).CornerRadius = UDim.new(0,4)
 
-    local rgbLabel = Instance.new("TextLabel")
-    rgbLabel.Size = UDim2.new(0,120,0,20)
-    rgbLabel.Position = UDim2.new(0,230,0,5)
-    rgbLabel.BackgroundTransparency = 1
-    rgbLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    rgbLabel.TextScaled = true
-    rgbLabel.Text = "RGB"
-    rgbLabel.Parent = settingsContent
-
-    rBox = Instance.new("TextBox")
-    rBox.Size = UDim2.new(0,60,0,22)
-    rBox.Position = UDim2.new(0,230,0,30)
-    rBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    rBox.TextColor3 = Color3.fromRGB(255,255,255)
-    rBox.TextScaled = true
-    rBox.Text = "255"
-    rBox.Parent = settingsContent
-
-    gBox = rBox:Clone()
-    gBox.Position = UDim2.new(0,230,0,58)
-    gBox.Text = "0"
-    gBox.Parent = settingsContent
-
-    bBox = rBox:Clone()
-    bBox.Position = UDim2.new(0,230,0,86)
-    bBox.Text = "0"
-    bBox.Parent = settingsContent
-
-    local hexLabel = rgbLabel:Clone()
-    hexLabel.Text = "HEX"
-    hexLabel.Position = UDim2.new(0,230,0,114)
-    hexLabel.Parent = settingsContent
-
-    hexBox = rBox:Clone()
-    hexBox.Position = UDim2.new(0,230,0,139)
-    hexBox.Text = "#FF0000"
-    hexBox.Parent = settingsContent
-
     applyFill = Instance.new("TextButton")
     applyFill.Size = UDim2.new(0,120,0,24)
-    applyFill.Position = UDim2.new(0,230,0,170)
+    applyFill.Position = UDim2.new(0,230,0,20)
     applyFill.BackgroundColor3 = Color3.fromRGB(60,120,60)
     applyFill.TextColor3 = Color3.fromRGB(255,255,255)
     applyFill.TextScaled = true
@@ -344,10 +342,9 @@ local function createUI()
 
     applyOutline = applyFill:Clone()
     applyOutline.Text = "Apply to Outline"
-    applyOutline.Position = UDim2.new(0,230,0,198)
+    applyOutline.Position = UDim2.new(0,230,0,50)
     applyOutline.Parent = settingsContent
 
-    -- Tab switching
     local function setTab(which)
         mainContent.Visible = (which == "main")
         debugContent.Visible = (which == "debug")
@@ -371,7 +368,7 @@ end
 createUI()
 
 ------------------------------------------------------------------
--- RESIZABLE UI (SMOOTH)
+-- RESIZABLE UI
 ------------------------------------------------------------------
 
 do
@@ -407,7 +404,7 @@ do
 end
 
 ------------------------------------------------------------------
--- COLOR PICKER LOGIC
+-- COLOR PICKER LOGIC (HTMLColorCodes-STYLE)
 ------------------------------------------------------------------
 
 local currentHue = 0
@@ -417,16 +414,6 @@ local currentV = 1
 local function updateFromHSV()
     local color = HSVToRGB(currentHue, currentS, currentV)
     preview.BackgroundColor3 = color
-
-    local r = math.floor(color.R * 255 + 0.5)
-    local g = math.floor(color.G * 255 + 0.5)
-    local b = math.floor(color.B * 255 + 0.5)
-
-    rBox.Text = tostring(r)
-    gBox.Text = tostring(g)
-    bBox.Text = tostring(b)
-    hexBox.Text = ColorToHex(color)
-
     svSquare.BackgroundColor3 = HSVToRGB(currentHue, 1, 1)
 end
 
@@ -472,34 +459,6 @@ hueBar.InputBegan:Connect(function(input)
             end
         end)
     end
-end)
-
-local function applyRGBBoxes()
-    local r = math.clamp(tonumber(rBox.Text) or 255,0,255)
-    local g = math.clamp(tonumber(gBox.Text) or 0,0,255)
-    local b = math.clamp(tonumber(bBox.Text) or 0,0,255)
-    local color = Color3.fromRGB(r,g,b)
-    preview.BackgroundColor3 = color
-    hexBox.Text = ColorToHex(color)
-    currentHue, currentS, currentV = RGBToHSV(color)
-    updateFromHSV()
-end
-
-rBox.FocusLost:Connect(applyRGBBoxes)
-gBox.FocusLost:Connect(applyRGBBoxes)
-bBox.FocusLost:Connect(applyRGBBoxes)
-
-hexBox.FocusLost:Connect(function()
-    local color = HexToColor(hexBox.Text)
-    preview.BackgroundColor3 = color
-    local r = math.floor(color.R * 255 + 0.5)
-    local g = math.floor(color.G * 255 + 0.5)
-    local b = math.floor(color.B * 255 + 0.5)
-    rBox.Text = tostring(r)
-    gBox.Text = tostring(g)
-    bBox.Text = tostring(b)
-    currentHue, currentS, currentV = RGBToHSV(color)
-    updateFromHSV()
 end)
 
 local function UpdateESPColors()
@@ -648,7 +607,7 @@ table.insert(Connections, UserInputService.InputEnded:Connect(function(input)
 end))
 
 ------------------------------------------------------------------
--- TRIGGERBOT (STRICT, PLAYER-ONLY, ORIGINAL STYLE)
+-- TRIGGERBOT
 ------------------------------------------------------------------
 
 local clicked = false
