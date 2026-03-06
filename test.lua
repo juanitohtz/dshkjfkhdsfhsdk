@@ -1,4 +1,15 @@
---[[ Added: Center-Screen Red Pixel Auto-Click ]]--
+--[[
+    Roblox ESP Pixel Overlay System
+    --------------------------------
+    Features:
+    - UI menu with toggle buttons
+    - ESP pixels on HumanoidRootPart
+    - Pixel stays same size at ANY distance
+    - Optional color detection (pixel color matches HRP color)
+    - Larger, more visible pixels with outline
+    - HOLD V to activate ESP
+    - Uses only Roblox APIs (safe & allowed)
+]]
 
 --// Services
 local Players = game:GetService("Players")
@@ -6,70 +17,67 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
-local mouse = LocalPlayer:GetMouse() -- for center pixel GUI detection
+local Camera = workspace.CurrentCamera
 
 --// UI Creation
-local espToggle, colorToggle
-do
-    local function createUI()
-        local screenGui = Instance.new("ScreenGui")
-        screenGui.Name = "ESP_UI"
-        screenGui.ResetOnSpawn = false
-        screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local function createUI()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "ESP_UI"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-        local mainFrame = Instance.new("Frame")
-        mainFrame.Name = "MainFrame"
-        mainFrame.Size = UDim2.new(0, 260, 0, 180)
-        mainFrame.Position = UDim2.new(0, 20, 0, 20)
-        mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-        mainFrame.BorderSizePixel = 0
-        mainFrame.Active = true
-        mainFrame.Draggable = true
-        mainFrame.Parent = screenGui
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 260, 0, 180)
+    mainFrame.Position = UDim2.new(0, 20, 0, 20)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Active = true
+    mainFrame.Draggable = true
+    mainFrame.Parent = screenGui
 
-        local title = Instance.new("TextLabel")
-        title.Size = UDim2.new(1, 0, 0, 30)
-        title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-        title.Text = "ESP Pixel Overlay"
-        title.TextColor3 = Color3.fromRGB(255, 255, 255)
-        title.TextScaled = true
-        title.BorderSizePixel = 0
-        title.Parent = mainFrame
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 30)
+    title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    title.Text = "ESP Pixel Overlay"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextScaled = true
+    title.BorderSizePixel = 0
+    title.Parent = mainFrame
 
-        local espToggleBtn = Instance.new("TextButton")
-        espToggleBtn.Size = UDim2.new(0, 220, 0, 40)
-        espToggleBtn.Position = UDim2.new(0, 20, 0, 45)
-        espToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        espToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        espToggleBtn.TextScaled = true
-        espToggleBtn.Text = "ESP: OFF"
-        espToggleBtn.BorderSizePixel = 0
-        espToggleBtn.Parent = mainFrame
+    local espToggle = Instance.new("TextButton")
+    espToggle.Size = UDim2.new(0, 220, 0, 40)
+    espToggle.Position = UDim2.new(0, 20, 0, 45)
+    espToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    espToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    espToggle.TextScaled = true
+    espToggle.Text = "ESP: OFF"
+    espToggle.BorderSizePixel = 0
+    espToggle.Parent = mainFrame
 
-        local colorToggleBtn = Instance.new("TextButton")
-        colorToggleBtn.Size = UDim2.new(0, 220, 0, 40)
-        colorToggleBtn.Position = UDim2.new(0, 20, 0, 95)
-        colorToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        colorToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        colorToggleBtn.TextScaled = true
-        colorToggleBtn.Text = "Color Detection: OFF"
-        colorToggleBtn.BorderSizePixel = 0
-        colorToggleBtn.Parent = mainFrame
+    local colorToggle = Instance.new("TextButton")
+    colorToggle.Size = UDim2.new(0, 220, 0, 40)
+    colorToggle.Position = UDim2.new(0, 20, 0, 95)
+    colorToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    colorToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    colorToggle.TextScaled = true
+    colorToggle.Text = "Color Detection: OFF"
+    colorToggle.BorderSizePixel = 0
+    colorToggle.Parent = mainFrame
 
-        local info = Instance.new("TextLabel")
-        info.Size = UDim2.new(1, -10, 0, 20)
-        info.Position = UDim2.new(0, 5, 1, -25)
-        info.BackgroundTransparency = 1
-        info.TextColor3 = Color3.fromRGB(180, 180, 180)
-        info.TextScaled = true
-        info.Text = "Hold V to activate ESP"
-        info.Parent = mainFrame
+    local info = Instance.new("TextLabel")
+    info.Size = UDim2.new(1, -10, 0, 20)
+    info.Position = UDim2.new(0, 5, 1, -25)
+    info.BackgroundTransparency = 1
+    info.TextColor3 = Color3.fromRGB(180, 180, 180)
+    info.TextScaled = true
+    info.Text = "Hold V to activate ESP"
+    info.Parent = mainFrame
 
-        return espToggleBtn, colorToggleBtn
-    end
-
-    espToggle, colorToggle = createUI()
+    return espToggle, colorToggle
 end
+
+local espToggle, colorToggle = createUI()
 
 --// ESP System
 local ESP = {}
@@ -96,6 +104,7 @@ function ESP:CreatePixel(character)
     billboard.LightInfluence = 0
     billboard.SizeOffset = Vector2.new(0, 0)
     billboard.StudsOffset = Vector3.new(0, 0, 0)
+
     billboard.Parent = LocalPlayer.PlayerGui
 
     local frame = Instance.new("Frame")
@@ -140,7 +149,6 @@ function ESP:Update()
                     self:CreatePixel(char)
                 end
 
-                -- Update color if color detection is enabled
                 if self.ColorDetection then
                     local root = self.Pixels[char].root
                     self.Pixels[char].frame.BackgroundColor3 = root.Color
@@ -178,42 +186,59 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
---// Center-Screen Red Pixel Auto-Click
-local redColor = Color3.fromRGB(255, 0, 0)
-local threshold = 0.1
+------------------------------------------------------------------
+-- CENTER SCREEN RED PIXEL DETECTOR (NEW)
+------------------------------------------------------------------
+
 local clicked = false
+local centerMargin = 6
 
-local function isRed(color)
-    local dr = color.R - redColor.R
-    local dg = color.G - redColor.G
-    local db = color.B - redColor.B
-    local dist = math.sqrt(dr*dr + dg*dg + db*db)
-    return dist < threshold
-end
+local function DetectCenterRedPixel()
 
-local function clickGUI()
-    local centerX = workspace.CurrentCamera.ViewportSize.X / 2
-    local centerY = workspace.CurrentCamera.ViewportSize.Y / 2
-    local guiObjects = LocalPlayer.PlayerGui:GetGuiObjectsAtPosition(centerX, centerY)
-    for _, gui in ipairs(guiObjects) do
-        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
-            local color = gui:IsA("ImageButton") and gui.ImageColor3 or gui.BackgroundColor3
-            if isRed(color) and not clicked then
-                gui:Activate()
-                clicked = true
-                print("[Red Click] Activated button at center!")
-            elseif not isRed(color) then
-                clicked = false
+    if not ESP.Enabled or not ESP.HoldKeyActive then
+        clicked = false
+        return
+    end
+
+    local centerX = Camera.ViewportSize.X / 2
+    local centerY = Camera.ViewportSize.Y / 2
+
+    for _, data in pairs(ESP.Pixels) do
+
+        local pos, visible = Camera:WorldToViewportPoint(data.root.Position)
+
+        if visible then
+
+            local dx = math.abs(pos.X - centerX)
+            local dy = math.abs(pos.Y - centerY)
+
+            if dx <= centerMargin and dy <= centerMargin then
+
+                local color = data.frame.BackgroundColor3
+
+                if color.R > 0.9 and color.G < 0.2 and color.B < 0.2 then
+
+                    if not clicked then
+                        clicked = true
+                        print("[RED DETECTED] Center pixel hit!")
+                        
+                        -- Place your click/fire code here if needed
+
+                    end
+
+                    return
+                end
             end
-            break
         end
     end
+
+    clicked = false
 end
 
 --// Main loop
 RunService.RenderStepped:Connect(function()
     ESP:Update()
-    clickGUI() -- check center pixel and auto-click
+    DetectCenterRedPixel()
 end)
 
-print("[ESP_UI] Loaded successfully with Red Pixel Auto-Click.")
+print("[ESP_UI] Loaded successfully.")
