@@ -133,10 +133,9 @@ local function createUI()
     debugInfo.TextColor3 = Color3.fromRGB(200,200,200)
     debugInfo.TextScaled = true
     debugInfo.TextWrapped = true
-    debugInfo.Text = "DISARMED: L off\nARMED: L on\nHOLDING: L on + V held\nLOCKED & FIRING: target in center"
+    debugInfo.Text = "DISARMED: L off\nARMED: L on\nHOLDING: L on + V held\nLOCKED & FIRING: enemy in center"
     debugInfo.Parent = debugContent
 
-    -- Tab switching
     local function setTab(mainActive)
         mainContent.Visible = mainActive
         debugContent.Visible = not mainActive
@@ -285,7 +284,29 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 ------------------------------------------------------------------
--- TRIGGERBOT (WITH DEBUG STATE)
+-- HELPER: FIND CHARACTER MODEL FROM HIT PART
+------------------------------------------------------------------
+
+local function getCharacterFromHit(part)
+    if not part then return nil end
+
+    local ancestor = part
+    while ancestor and not ancestor:IsA("Model") do
+        ancestor = ancestor.Parent
+    end
+    if not ancestor then return nil end
+
+    -- Prefer models with Humanoid
+    if ancestor:FindFirstChildOfClass("Humanoid") then
+        return ancestor
+    end
+
+    -- Fallback: still use the model
+    return ancestor
+end
+
+------------------------------------------------------------------
+-- TRIGGERBOT (LOCK & FIRE FIXED)
 ------------------------------------------------------------------
 
 local clicked = false
@@ -327,19 +348,23 @@ local function DetectCenterTarget()
     local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
 
     if result and result.Instance then
-        local part = result.Instance
-        local model = part:FindFirstAncestorOfClass("Model")
-        local playerHit = model and Players:GetPlayerFromCharacter(model)
+        local charModel = getCharacterFromHit(result.Instance)
+        if charModel then
+            local playerHit = Players:GetPlayerFromCharacter(charModel)
 
-        if playerHit and playerHit ~= LocalPlayer then
-            TriggerState = "LOCKED & FIRING"
-            if not clicked then
-                clicked = true
-                mouse1press()
-                task.wait()
-                mouse1release()
+            -- If game uses NPCs or non-standard rigs, still allow firing as long as it's not you
+            local isSelf = (playerHit == LocalPlayer) or (LocalPlayer.Character and charModel == LocalPlayer.Character)
+
+            if not isSelf then
+                TriggerState = "LOCKED & FIRING"
+                if not clicked then
+                    clicked = true
+                    mouse1press()
+                    task.wait()
+                    mouse1release()
+                end
+                return
             end
-            return
         end
     end
 
