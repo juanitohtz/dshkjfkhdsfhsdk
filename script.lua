@@ -168,50 +168,55 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 ------------------------------------------------------------------
--- TRIGGERBOT DETECTOR
+-- CENTER SCREEN DETECTOR USING CHARACTER BODY
 ------------------------------------------------------------------
 
-local function DetectCenter()
+local function DetectCenterTarget()
 
-    if not MB5Held then return end
+    if not MB5Held then
+        return
+    end
 
     local centerX = Camera.ViewportSize.X/2
     local centerY = Camera.ViewportSize.Y/2
 
-    for char,_ in pairs(ESP.Pixels) do
+    for _,player in ipairs(Players:GetPlayers()) do
 
-        if char then
+        if player ~= LocalPlayer then
 
-            for _,part in ipairs(char:GetChildren()) do
+            local char = player.Character
 
-                if part:IsA("BasePart") then
+            if char then
 
-                    local pos,visible = Camera:WorldToViewportPoint(part.Position)
+                for _,part in ipairs(char:GetChildren()) do
 
-                    if visible then
+                    if part:IsA("BasePart") then
 
-                        local dx = math.abs(pos.X - centerX)
-                        local dy = math.abs(pos.Y - centerY)
+                        local pos,visible = Camera:WorldToViewportPoint(part.Position)
 
-                        if dx < 5 and dy < 5 then
+                        if visible then
 
-                            VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,true,game,0)
-                            VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,false,game,0)
+                            local size = 6 -- hitbox screen tolerance
 
-                            return
+                            if math.abs(pos.X-centerX) <= size and
+                               math.abs(pos.Y-centerY) <= size then
+
+                                VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,true,game,0)
+                                VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,false,game,0)
+
+                                return
+                            end
                         end
-
                     end
                 end
+
             end
         end
     end
-end
 
+end
 --// Main loop
 RunService.RenderStepped:Connect(function()
     ESP:Update()
-    DetectCenter()
+    DetectCenterTarget()
 end)
-
-print("[ESP_UI] Loaded successfully.")
