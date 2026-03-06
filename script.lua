@@ -1,5 +1,6 @@
 --[[
     Roblox ESP Pixel Overlay System
+    Modified: Uses Highlight instead of Billboard pixels
 ]]
 
 --// Services
@@ -13,7 +14,6 @@ local Camera = workspace.CurrentCamera
 
 --// UI Creation
 local function createUI()
-
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "ESP_UI"
     screenGui.ResetOnSpawn = false
@@ -32,7 +32,7 @@ local function createUI()
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1,0,0,30)
     title.BackgroundColor3 = Color3.fromRGB(35,35,35)
-    title.Text = "ESP Pixel Overlay"
+    title.Text = "ESP Highlight System"
     title.TextColor3 = Color3.fromRGB(255,255,255)
     title.TextScaled = true
     title.BorderSizePixel = 0
@@ -83,28 +83,24 @@ function ESP:CreatePixel(character)
 
     if not character or self.Pixels[character] then return end
 
-    local root = character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-
     local highlight = Instance.new("Highlight")
-    highlight.Name = "ESPHighlight"
-
-    highlight.Adornee = character
+    highlight.Name = "ESP_Highlight"
     highlight.FillColor = Color3.fromRGB(255,0,0)
-    highlight.OutlineColor = Color3.fromRGB(255,255,255)
-
     highlight.FillTransparency = 0.5
+    highlight.OutlineColor = Color3.fromRGB(255,255,255)
     highlight.OutlineTransparency = 0
-
+    highlight.Adornee = character
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 
-    -- parent directly to the character (most reliable)
     highlight.Parent = character
 
+    local root = character:FindFirstChild("HumanoidRootPart")
+
     self.Pixels[character] = {
-        root = root,
-        highlight = highlight
+        highlight = highlight,
+        root = root
     }
+
 end
 
 function ESP:RemovePixel(character)
@@ -124,20 +120,20 @@ end
 function ESP:ClearAll()
 
     for char,data in pairs(self.Pixels) do
+
         if data.highlight then
             data.highlight:Destroy()
         end
+
     end
 
-    self.Pixels = {}
-end
     self.Pixels = {}
 end
 
 function ESP:Update()
 
-    if not ESP.Enabled or not ESP.HoldKeyActive then
-        ESP:ClearAll()
+    if not self.Enabled or not self.HoldKeyActive then
+        self:ClearAll()
         return
     end
 
@@ -149,12 +145,12 @@ function ESP:Update()
 
             if char and char:FindFirstChild("HumanoidRootPart") then
 
-                if not ESP.Pixels[char] then
-                    ESP:CreatePixel(char)
+                if not self.Pixels[char] then
+                    self:CreatePixel(char)
                 end
 
             else
-                ESP:RemovePixel(char)
+                self:RemovePixel(char)
             end
         end
     end
@@ -162,21 +158,14 @@ end
 
 --// UI Toggles
 espToggle.MouseButton1Click:Connect(function()
-
     ESP.Enabled = not ESP.Enabled
     espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
-
-    if not ESP.Enabled then
-        ESP:ClearAll()
-    end
-
+    if not ESP.Enabled then ESP:ClearAll() end
 end)
 
 colorToggle.MouseButton1Click:Connect(function()
-
     ESP.ColorDetection = not ESP.ColorDetection
     colorToggle.Text = ESP.ColorDetection and "Color Detection: ON" or "Color Detection: OFF"
-
 end)
 
 --// HOLD V
@@ -194,11 +183,11 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 ------------------------------------------------------------------
--- CENTER SCREEN RED DETECTOR
+-- CENTER SCREEN DETECTOR + MB1 CLICK
 ------------------------------------------------------------------
 
 local clicked = false
-local centerMargin = 12
+local centerMargin = 6
 
 local function DetectCenterRedPixel()
 
