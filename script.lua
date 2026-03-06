@@ -1,74 +1,185 @@
-print("Working")
-
-local ffi = require("ffi")
-
-ffi.cdef[[
-typedef void* HWND;
-typedef void* HDC;
-typedef unsigned long DWORD;
-typedef unsigned int UINT;
-
-HDC GetDC(HWND hWnd);
-int ReleaseDC(HWND hWnd, HDC hDC);
-DWORD GetPixel(HDC hdc, int nXPos, int nYPos);
-
-typedef struct {
-    long dx;
-    long dy;
-    DWORD mouseData;
-    DWORD dwFlags;
-    DWORD time;
-    void* dwExtraInfo;
-} MOUSEINPUT;
-
-typedef struct {
-    DWORD type;
-    MOUSEINPUT mi;
-} INPUT;
-
-UINT SendInput(UINT cInputs, INPUT *pInputs, int cbSize);
-void Sleep(unsigned int ms);
+--[[
+    Simple Character ESP Pixel Overlay with UI Toggle
+    ------------------------------------------------
+    - Draws tiny "pixels" above other players' heads
+    - Toggle via on-screen button
+    - Uses only Roblox APIs:
+        * game.Players
+        * workspace
+        * RunService
+    - Place this in StarterPlayerScripts or run as a LocalScript
 ]]
 
-local user32 = ffi.load("user32")
-local gdi32 = ffi.load("gdi32")
+--// Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
 
-local MOUSEEVENTF_LEFTDOWN = 0x0002
-local MOUSEEVENTF_LEFTUP = 0x0004
-local INPUT_MOUSE = 0
+--// Main UI Setup
+local function createMainUI()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "ESP_UI"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- set your resolution
-local screenX = 1920
-local screenY = 1080
-local cx = math.floor(screenX / 2)
-local cy = math.floor(screenY / 2)
+    -- Main frame
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 220, 0, 120)
+    mainFrame.Position = UDim2.new(0, 20, 0, 20)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Active = true
+    mainFrame.Draggable = true
+    mainFrame.Parent = screenGui
 
-local function click()
-    local inputs = ffi.new("INPUT[2]")
+    -- Title bar
+    local titleBar = Instance.new("TextLabel")
+    titleBar.Name = "TitleBar"
+    titleBar.Size = UDim2.new(1, 0, 0, 30)
+    titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    titleBar.BorderSizePixel = 0
+    titleBar.Text = "ESP Pixel Overlay"
+    titleBar.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleBar.TextScaled = true
+    titleBar.Parent = mainFrame
 
-    inputs[0].type = INPUT_MOUSE
-    inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN
+    -- Toggle button
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Name = "ToggleButton"
+    toggleButton.Size = UDim2.new(0, 180, 0, 40)
+    toggleButton.Position = UDim2.new(0, 20, 0, 40)
+    toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    toggleButton.BorderSizePixel = 0
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.TextScaled = true
+    toggleButton.Text = "ESP: OFF"
+    toggleButton.Parent = mainFrame
 
-    inputs[1].type = INPUT_MOUSE
-    inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP
+    -- Info label
+    local infoLabel = Instance.new("TextLabel")
+    infoLabel.Name = "InfoLabel"
+    infoLabel.Size = UDim2.new(1, -10, 0, 20)
+    infoLabel.Position = UDim2.new(0, 5, 1, -25)
+    infoLabel.BackgroundTransparency = 1
+    infoLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    infoLabel.TextScaled = true
+    infoLabel.Text = "Shows pixels above other players"
+    infoLabel.Parent = mainFrame
 
-    user32.SendInput(2, inputs, ffi.sizeof("INPUT"))
+    return screenGui, mainFrame, toggleButton
 end
 
-local hdc = gdi32.GetDC(nil)
+--// ESP Manager
+local ESP = {}
+ESP.Enabled = false
+ESP.Pixels = {} -- [Character] = BillboardGui
+ESP.Color = Color3.fromRGB(255, 0, 0)
+ESP.PixelSize = 4
 
-while true do
-    local color = gdi32.GetPixel(hdc, cx, cy)
-
-    local r = color % 256
-    local g = math.floor(color / 256) % 256
-    local b = math.floor(color / 65536) % 256
-
-    -- detect red
-    if r > 200 and g < 80 and b < 80 then
-        click()
-        ffi.C.Sleep(20)
+-- Create a pixel above a character's head
+function ESP:CreatePixel(character)
+    if not character or self.Pixels[character] then
+        return
     end
 
-    ffi.C.Sleep(2)
+    local head = character:FindFirstChild("Head")
+    if not head then
+        return
+    end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP_Pixel"
+    billboard.Size = UDim2.new(0, self.PixelSize, 0, self.PixelSize)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = head
+    billboard.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    local frame = Instance.new("Frame")
+    frame.Name = "Pixel"
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundColor3 = self.Color
+    frame.BorderSizePixel = 0
+    frame.Parent = billboard
+
+    self.Pixels[character] = billboard
 end
+
+-- Remove pixel for a character
+function ESP:RemovePixel(character)
+    local gui = self.Pixels[character]
+    if gui then
+        gui:Destroy()
+        self.Pixels[character] = nil
+    end
+end
+
+-- Clear all pixels
+function ESP:ClearAll()
+    for character, gui in pairs(self.Pixels) do
+        if gui then
+            gui:Destroy()
+        end
+    end
+    self.Pixels = {}
+end
+
+-- Update loop: ensure pixels exist for all other players
+function ESP:Update()
+    if not self.Enabled then
+        return
+    end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local character = player.Character
+            if character and character:FindFirstChild("Head") then
+                self:CreatePixel(character)
+            else
+                self:RemovePixel(character)
+            end
+        end
+    end
+end
+
+-- Handle character removal
+local function onCharacterRemoving(character)
+    ESP:RemovePixel(character)
+end
+
+-- Connect character removing for all players
+local function hookPlayer(player)
+    player.CharacterRemoving:Connect(onCharacterRemoving)
+end
+
+for _, plr in ipairs(Players:GetPlayers()) do
+    if plr ~= LocalPlayer then
+        hookPlayer(plr)
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    if player ~= LocalPlayer then
+        hookPlayer(player)
+    end
+end)
+
+--// UI + Logic Wiring
+local screenGui, mainFrame, toggleButton = createMainUI()
+
+toggleButton.MouseButton1Click:Connect(function()
+    ESP.Enabled = not ESP.Enabled
+    toggleButton.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
+
+    if not ESP.Enabled then
+        ESP:ClearAll()
+    end
+end)
+
+--// Main Render Loop
+RunService.RenderStepped:Connect(function()
+    ESP:Update()
+end)
+
+-- Optional: initial log
+print("[ESP_UI] Loaded ESP Pixel Overlay for", LocalPlayer.Name)
