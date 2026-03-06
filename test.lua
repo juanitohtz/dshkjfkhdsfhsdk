@@ -142,6 +142,7 @@ UserInputService.InputBegan:Connect(function(input, gp)
     -- L toggles ESP active state
     if input.KeyCode == Enum.KeyCode.L then
         ESP.ToggleActive = not ESP.ToggleActive
+        print("ESP.ToggleActive:", ESP.ToggleActive)
         if not ESP.ToggleActive then
             ESP:ClearAll()
         end
@@ -150,6 +151,7 @@ UserInputService.InputBegan:Connect(function(input, gp)
     -- Hold V for triggerbot
     if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = true
+        print("TriggerHeld = true")
     end
 end)
 
@@ -157,6 +159,7 @@ UserInputService.InputEnded:Connect(function(input)
     -- Release V stops triggerbot
     if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = false
+        print("TriggerHeld = false")
     end
 end)
 
@@ -172,22 +175,25 @@ local function DetectCenterTarget()
         return
     end
 
-    local center = Camera.ViewportSize / 2
-    local ray = Camera:ViewportPointToRay(center.X, center.Y)
+    local origin = Camera.CFrame.Position
+    local direction = Camera.CFrame.LookVector * 1000
 
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Blacklist
     params.FilterDescendantsInstances = {LocalPlayer.Character}
 
-    local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
+    local result = workspace:Raycast(origin, direction, params)
 
     if result and result.Instance then
         local model = result.Instance:FindFirstAncestorOfClass("Model")
-        if model and Players:GetPlayerFromCharacter(model) then
+        local hitPlayer = model and Players:GetPlayerFromCharacter(model)
+
+        if hitPlayer and hitPlayer ~= LocalPlayer then
             if not clicked then
                 clicked = true
+                print("Triggerbot target:", hitPlayer.Name)
 
-                -- Simulated mouse click at screen center
+                local center = Camera.ViewportSize / 2
                 VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 0)
                 task.wait()
                 VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 0)
