@@ -3,10 +3,10 @@
     --------------------------------
     Features:
     - UI menu with toggle button
-    - ESP pixels above all other players
-    - Larger, more visible pixels with outline
+    - ESP pixels on HumanoidRootPart
     - Pixel stays same size at ANY distance
-    - Pixel attached to HumanoidRootPart
+    - Pixel color matches HumanoidRootPart color (color detection)
+    - Larger, more visible pixels with outline
     - HOLD V to activate ESP
     - Uses only Roblox APIs (safe & allowed)
 ]]
@@ -72,7 +72,6 @@ local toggleButton = createUI()
 local ESP = {}
 ESP.Enabled = false
 ESP.Pixels = {}
-ESP.Color = Color3.fromRGB(255, 0, 0)
 ESP.PixelSize = 14
 ESP.HoldKeyActive = false
 
@@ -89,17 +88,17 @@ function ESP:CreatePixel(character)
     billboard.AlwaysOnTop = true
     billboard.Adornee = root
 
-    -- keeps pixel same size at ANY distance
+    -- Pixel stays same size at ANY distance
     billboard.MaxDistance = math.huge
     billboard.LightInfluence = 0
     billboard.SizeOffset = Vector2.new(0, 0)
-    billboard.StudsOffset = Vector3.new(0, 2, 0)
+    billboard.StudsOffset = Vector3.new(0, 0, 0) -- EXACTLY on HRP
 
     billboard.Parent = LocalPlayer.PlayerGui
 
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 1, 0)
-    frame.BackgroundColor3 = self.Color
+    frame.BackgroundColor3 = root.Color -- COLOR DETECTION
     frame.BorderSizePixel = 0
     frame.Parent = billboard
 
