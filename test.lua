@@ -306,12 +306,13 @@ local function getCharacterFromHit(part)
 end
 
 ------------------------------------------------------------------
--- TRIGGERBOT (LOCK & FIRE FIXED)
+-- TRIGGERBOT (FULLY FIXED, INDEPENDENT OF ESP, FIRES CONTINUOUSLY)
 ------------------------------------------------------------------
 
 local clicked = false
 
 local function DetectCenterTarget()
+    -- Only require L toggle + V hold
     if not ESP.ToggleActive then
         TriggerState = "DISARMED"
         clicked = false
@@ -324,13 +325,6 @@ local function DetectCenterTarget()
         return
     end
 
-    if not Camera then
-        Camera = workspace.CurrentCamera
-        if not Camera then
-            return
-        end
-    end
-
     TriggerState = "HOLDING"
 
     local centerX = Camera.ViewportSize.X / 2
@@ -340,37 +334,38 @@ local function DetectCenterTarget()
 
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Blacklist
-    params.FilterDescendantsInstances = {}
-    if LocalPlayer.Character then
-        params.FilterDescendantsInstances = {LocalPlayer.Character}
-    end
+    params.FilterDescendantsInstances = {LocalPlayer.Character}
 
     local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
 
     if result and result.Instance then
-        local charModel = getCharacterFromHit(result.Instance)
-        if charModel then
-            local playerHit = Players:GetPlayerFromCharacter(charModel)
+        -- Find the character model
+        local part = result.Instance
+        local model = part:FindFirstAncestorOfClass("Model")
 
-            -- If game uses NPCs or non-standard rigs, still allow firing as long as it's not you
-            local isSelf = (playerHit == LocalPlayer) or (LocalPlayer.Character and charModel == LocalPlayer.Character)
+        if model then
+            local humanoid = model:FindFirstChildOfClass("Humanoid")
 
-            if not isSelf then
+            -- Only fire if it's a humanoid and not yourself
+            if humanoid and model ~= LocalPlayer.Character then
                 TriggerState = "LOCKED & FIRING"
-                if not clicked then
-                    clicked = true
-                    mouse1press()
-                    task.wait()
-                    mouse1release()
-                end
+
+                -- Fire EVERY frame while locked
+                mouse1press()
+                task.wait()
+                mouse1release()
+
+                clicked = false
                 return
             end
         end
     end
 
+    -- No target → reset
     TriggerState = "HOLDING"
     clicked = false
 end
+
 
 ------------------------------------------------------------------
 -- MAIN LOOP
