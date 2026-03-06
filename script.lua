@@ -1,8 +1,7 @@
 --[[ 
-    Roblox ESP + Triggerbot System
-    Controls:
-        V = Toggle ESP
-        Hold L = Triggerbot
+    Roblox ESP Pixel Overlay System
+    Modified: Uses Highlight instead of Billboard pixels
+    Updated: L toggles ESP, V on hold activates trigger
 ]]
 
 --// Services
@@ -56,7 +55,7 @@ local function createUI()
     info.BackgroundTransparency = 1
     info.TextColor3 = Color3.fromRGB(180,180,180)
     info.TextScaled = true
-    info.Text = "Press V to toggle ESP | Hold L to trigger"
+    info.Text = "Press L to toggle ESP | Hold V to trigger"
     info.Parent = mainFrame
 
     return espToggle
@@ -65,14 +64,15 @@ end
 local espToggle = createUI()
 
 --// ESP System
-local ESP = {
-    Enabled = false,
-    ToggleActive = false,
-    Highlights = {}
-}
+local ESP = {}
+ESP.Enabled = false
+ESP.Pixels = {}
+ESP.ToggleActive = false
 
-function ESP:CreateHighlight(character)
-    if not character or self.Highlights[character] then return end
+local MB5Held = false
+
+function ESP:CreatePixel(character)
+    if not character or self.Pixels[character] then return end
 
     local highlight = Instance.new("Highlight")
     highlight.Name = "ESP_Highlight"
@@ -80,25 +80,25 @@ function ESP:CreateHighlight(character)
     highlight.FillTransparency = 0.5
     highlight.OutlineColor = Color3.fromRGB(255,255,255)
     highlight.OutlineTransparency = 0
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Adornee = character
-    highlight.Parent = workspace
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = character
 
-    self.Highlights[character] = highlight
+    self.Pixels[character] = highlight
 end
 
-function ESP:RemoveHighlight(character)
-    if character and self.Highlights[character] then
-        self.Highlights[character]:Destroy()
-        self.Highlights[character] = nil
+function ESP:RemovePixel(character)
+    if character and self.Pixels[character] then
+        self.Pixels[character]:Destroy()
+        self.Pixels[character] = nil
     end
 end
 
 function ESP:ClearAll()
-    for _, highlight in pairs(self.Highlights) do
+    for _,highlight in pairs(self.Pixels) do
         highlight:Destroy()
     end
-    self.Highlights = {}
+    self.Pixels = {}
 end
 
 function ESP:Update()
@@ -107,15 +107,15 @@ function ESP:Update()
         return
     end
 
-    for _, player in ipairs(Players:GetPlayers()) do
+    for _,player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             local char = player.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
-                if not self.Highlights[char] then
-                    self:CreateHighlight(char)
+                if not self.Pixels[char] then
+                    self:CreatePixel(char)
                 end
             else
-                self:RemoveHighlight(char)
+                self:RemovePixel(char)
             end
         end
     end
@@ -128,29 +128,40 @@ espToggle.MouseButton1Click:Connect(function()
     if not ESP.Enabled then ESP:ClearAll() end
 end)
 
---// Input System
+------------------------------------------------------------------
+-- INPUT SYSTEM (L KEY TOGGLE ESP, V HOLD FOR TRIGGERBOT)
+------------------------------------------------------------------
+
 local TriggerHeld = false
 
-UserInputService.InputBegan:Connect(function(input, gp)
+UserInputService.InputBegan:Connect(function(input,gp)
     if gp then return end
 
-    if input.KeyCode == Enum.KeyCode.V then
+    -- L now toggles ESP active state
+    if input.KeyCode == Enum.KeyCode.L then
         ESP.ToggleActive = not ESP.ToggleActive
-        if not ESP.ToggleActive then ESP:ClearAll() end
+        if not ESP.ToggleActive then
+            ESP:ClearAll()
+        end
     end
 
-    if input.KeyCode == Enum.KeyCode.L then
+    -- V now is the hold key for trigger
+    if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = true
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.L then
+    -- Release V stops trigger
+    if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = false
     end
 end)
 
---// Triggerbot
+------------------------------------------------------------------
+-- CENTER SCREEN TRIGGERBOT (RAYCAST)
+------------------------------------------------------------------
+
 local clicked = false
 
 local function DetectCenterTarget()
@@ -159,8 +170,10 @@ local function DetectCenterTarget()
         return
     end
 
-    local center = Camera.ViewportSize / 2
-    local ray = Camera:ViewportPointToRay(center.X, center.Y)
+    local centerX = Camera.ViewportSize.X / 2
+    local centerY = Camera.ViewportSize.Y / 2
+
+    local ray = Camera:ViewportPointToRay(centerX, centerY)
 
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Blacklist
@@ -168,15 +181,18 @@ local function DetectCenterTarget()
 
     local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
 
-    if result then
-        local model = result.Instance:FindFirstAncestorOfClass("Model")
+    if result and result.Instance then
+        local part = result.Instance
+        local model = part:FindFirstAncestorOfClass("Model")
+
         if model and Players:GetPlayerFromCharacter(model) then
             if not clicked then
                 clicked = true
 
-                VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 0)
+                -- REAL mouse click (executor-provided)
+                mouse1press()
                 task.wait()
-                VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 0)
+                mouse1release()
             end
             return
         end
@@ -185,7 +201,7 @@ local function DetectCenterTarget()
     clicked = false
 end
 
---// Main Loop
+--// Main loop
 RunService.RenderStepped:Connect(function()
     ESP:Update()
     DetectCenterTarget()
