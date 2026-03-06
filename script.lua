@@ -183,11 +183,10 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 ------------------------------------------------------------------
--- CENTER SCREEN DETECTOR + MB1 CLICK (FULL BODY)
+-- CENTER SCREEN DETECTOR USING HIGHLIGHT BOUNDS
 ------------------------------------------------------------------
 
 local clicked = false
-local centerMargin = 6
 
 local function DetectCenterRedPixel()
 
@@ -203,30 +202,41 @@ local function DetectCenterRedPixel()
 
         if char then
 
-            for _,part in ipairs(char:GetChildren()) do
+            local minX, minY = math.huge, math.huge
+            local maxX, maxY = -math.huge, -math.huge
+            local visiblePart = false
 
+            for _,part in ipairs(char:GetChildren()) do
                 if part:IsA("BasePart") then
 
                     local pos,visible = Camera:WorldToViewportPoint(part.Position)
 
                     if visible then
+                        visiblePart = true
 
-                        local dx = math.abs(pos.X-centerX)
-                        local dy = math.abs(pos.Y-centerY)
+                        minX = math.min(minX,pos.X)
+                        minY = math.min(minY,pos.Y)
 
-                        if dx <= centerMargin and dy <= centerMargin then
-
-                            if not clicked then
-                                clicked = true
-
-                                VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,true,game,0)
-                                VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,false,game,0)
-
-                            end
-
-                            return
-                        end
+                        maxX = math.max(maxX,pos.X)
+                        maxY = math.max(maxY,pos.Y)
                     end
+                end
+            end
+
+            if visiblePart then
+
+                if centerX >= minX and centerX <= maxX and
+                   centerY >= minY and centerY <= maxY then
+
+                    if not clicked then
+                        clicked = true
+
+                        VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,true,game,0)
+                        VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,false,game,0)
+
+                    end
+
+                    return
                 end
             end
         end
