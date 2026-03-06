@@ -89,7 +89,7 @@ local function ColorToHex(color)
 end
 
 local function HexToColor(hex)
-    hex = hex:gsub("#","")
+    hex = tostring(hex or ""):gsub("#","")
     if #hex ~= 6 then return Color3.new(1,1,1) end
     local r = tonumber(hex:sub(1,2),16) or 255
     local g = tonumber(hex:sub(3,4),16) or 255
@@ -98,18 +98,26 @@ local function HexToColor(hex)
 end
 
 ------------------------------------------------------------------
--- UI
+-- UI (COMPACT, MODULAR STYLE)
 ------------------------------------------------------------------
 
+local screenGui, mainFrame, resizeHandle
+local mainTab, debugTab, settingsTab
+local mainContent, debugContent, settingsContent
+local espToggle, stateLabel, killButton
+local svSquare, hueBar, preview
+local rBox, gBox, bBox, hexBox
+local applyFill, applyOutline
+
 local function createUI()
-    local screenGui = Instance.new("ScreenGui")
+    screenGui = Instance.new("ScreenGui")
     screenGui.Name = "ESP_UI"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-    local mainFrame = Instance.new("Frame")
+    mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0,360,0,280)
+    mainFrame.Size = UDim2.new(0,360,0,260)
     mainFrame.Position = UDim2.new(0,20,0,20)
     mainFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
     mainFrame.BorderSizePixel = 0
@@ -118,14 +126,14 @@ local function createUI()
     mainFrame.Parent = screenGui
     Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0,8)
 
-    local resizeHandle = Instance.new("Frame")
-    resizeHandle.Size = UDim2.new(0,16,0,16)
+    resizeHandle = Instance.new("Frame")
+    resizeHandle.Size = UDim2.new(0,14,0,14)
     resizeHandle.AnchorPoint = Vector2.new(1,1)
     resizeHandle.Position = UDim2.new(1,0,1,0)
     resizeHandle.BackgroundColor3 = Color3.fromRGB(60,60,60)
     resizeHandle.BorderSizePixel = 0
     resizeHandle.Parent = mainFrame
-    Instance.new("UICorner", resizeHandle).CornerRadius = UDim.new(0,4)
+    Instance.new("UICorner", resizeHandle).CornerRadius = UDim.new(0,3)
 
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1,0,0,30)
@@ -137,14 +145,13 @@ local function createUI()
     title.Parent = mainFrame
     Instance.new("UICorner", title).CornerRadius = UDim.new(0,8)
 
-    -- Tabs
     local tabBar = Instance.new("Frame")
     tabBar.Size = UDim2.new(1,-10,0,26)
     tabBar.Position = UDim2.new(0,5,0,32)
     tabBar.BackgroundTransparency = 1
     tabBar.Parent = mainFrame
 
-    local mainTab = Instance.new("TextButton")
+    mainTab = Instance.new("TextButton")
     mainTab.Size = UDim2.new(1/3,-5,1,0)
     mainTab.Position = UDim2.new(0,0,0,0)
     mainTab.BackgroundColor3 = Color3.fromRGB(50,50,50)
@@ -155,7 +162,7 @@ local function createUI()
     mainTab.Parent = tabBar
     Instance.new("UICorner", mainTab).CornerRadius = UDim.new(0,6)
 
-    local debugTab = Instance.new("TextButton")
+    debugTab = Instance.new("TextButton")
     debugTab.Size = UDim2.new(1/3,-5,1,0)
     debugTab.Position = UDim2.new(1/3,5,0,0)
     debugTab.BackgroundColor3 = Color3.fromRGB(35,35,35)
@@ -166,7 +173,7 @@ local function createUI()
     debugTab.Parent = tabBar
     Instance.new("UICorner", debugTab).CornerRadius = UDim.new(0,6)
 
-    local settingsTab = Instance.new("TextButton")
+    settingsTab = Instance.new("TextButton")
     settingsTab.Size = UDim2.new(1/3,-5,1,0)
     settingsTab.Position = UDim2.new(2/3,10,0,0)
     settingsTab.BackgroundColor3 = Color3.fromRGB(35,35,35)
@@ -178,14 +185,14 @@ local function createUI()
     Instance.new("UICorner", settingsTab).CornerRadius = UDim.new(0,6)
 
     -- Main content
-    local mainContent = Instance.new("Frame")
+    mainContent = Instance.new("Frame")
     mainContent.Size = UDim2.new(1,-10,1,-90)
     mainContent.Position = UDim2.new(0,5,0,60)
     mainContent.BackgroundTransparency = 1
     mainContent.Name = "MainContent"
     mainContent.Parent = mainFrame
 
-    local espToggle = Instance.new("TextButton")
+    espToggle = Instance.new("TextButton")
     espToggle.Size = UDim2.new(0,260,0,36)
     espToggle.Position = UDim2.new(0,20,0,5)
     espToggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
@@ -206,7 +213,7 @@ local function createUI()
     info.Text = "L = Arm/Disarm | Hold V = Trigger | RightShift = Hide UI"
     info.Parent = mainContent
 
-    local killButton = Instance.new("TextButton")
+    killButton = Instance.new("TextButton")
     killButton.Size = UDim2.new(0,260,0,30)
     killButton.Position = UDim2.new(0,20,1,-35)
     killButton.BackgroundColor3 = Color3.fromRGB(150,40,40)
@@ -218,7 +225,7 @@ local function createUI()
     Instance.new("UICorner", killButton).CornerRadius = UDim.new(0,6)
 
     -- Debug content
-    local debugContent = Instance.new("Frame")
+    debugContent = Instance.new("Frame")
     debugContent.Size = UDim2.new(1,-10,1,-90)
     debugContent.Position = UDim2.new(0,5,0,60)
     debugContent.BackgroundTransparency = 1
@@ -226,7 +233,7 @@ local function createUI()
     debugContent.Visible = false
     debugContent.Parent = mainFrame
 
-    local stateLabel = Instance.new("TextLabel")
+    stateLabel = Instance.new("TextLabel")
     stateLabel.Size = UDim2.new(1,-10,0,30)
     stateLabel.Position = UDim2.new(0,5,0,5)
     stateLabel.BackgroundColor3 = Color3.fromRGB(35,35,35)
@@ -247,8 +254,8 @@ local function createUI()
     debugInfo.Text = "DISARMED: L off\nARMED: L on\nHOLDING: L on + V held\nLOCKED & FIRING: enemy in center"
     debugInfo.Parent = debugContent
 
-    -- ESP SETTINGS CONTENT
-    local settingsContent = Instance.new("Frame")
+    -- Settings content
+    settingsContent = Instance.new("Frame")
     settingsContent.Size = UDim2.new(1,-10,1,-90)
     settingsContent.Position = UDim2.new(0,5,0,60)
     settingsContent.BackgroundTransparency = 1
@@ -257,28 +264,28 @@ local function createUI()
     settingsContent.Parent = mainFrame
 
     local pickerFrame = Instance.new("Frame")
-    pickerFrame.Size = UDim2.new(0,200,0,160)
+    pickerFrame.Size = UDim2.new(0,210,0,160)
     pickerFrame.Position = UDim2.new(0,10,0,5)
     pickerFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
     pickerFrame.BorderSizePixel = 0
     pickerFrame.Parent = settingsContent
     Instance.new("UICorner", pickerFrame).CornerRadius = UDim.new(0,6)
 
-    local svSquare = Instance.new("Frame")
+    svSquare = Instance.new("Frame")
     svSquare.Size = UDim2.new(0,130,0,130)
     svSquare.Position = UDim2.new(0,10,0,10)
     svSquare.BackgroundColor3 = Color3.fromRGB(255,0,0)
     svSquare.BorderSizePixel = 0
     svSquare.Parent = pickerFrame
 
-    local hueBar = Instance.new("Frame")
+    hueBar = Instance.new("Frame")
     hueBar.Size = UDim2.new(0,20,0,130)
     hueBar.Position = UDim2.new(0,150,0,10)
     hueBar.BackgroundColor3 = Color3.fromRGB(255,0,0)
     hueBar.BorderSizePixel = 0
     hueBar.Parent = pickerFrame
 
-    local preview = Instance.new("Frame")
+    preview = Instance.new("Frame")
     preview.Size = UDim2.new(0,40,0,40)
     preview.Position = UDim2.new(0,150,0,145)
     preview.BackgroundColor3 = ESP.FillColor
@@ -288,45 +295,45 @@ local function createUI()
 
     local rgbLabel = Instance.new("TextLabel")
     rgbLabel.Size = UDim2.new(0,120,0,20)
-    rgbLabel.Position = UDim2.new(0,220,0,5)
+    rgbLabel.Position = UDim2.new(0,230,0,5)
     rgbLabel.BackgroundTransparency = 1
     rgbLabel.TextColor3 = Color3.fromRGB(255,255,255)
     rgbLabel.TextScaled = true
     rgbLabel.Text = "RGB"
     rgbLabel.Parent = settingsContent
 
-    local rBox = Instance.new("TextBox")
-    rBox.Size = UDim2.new(0,60,0,24)
-    rBox.Position = UDim2.new(0,220,0,30)
+    rBox = Instance.new("TextBox")
+    rBox.Size = UDim2.new(0,60,0,22)
+    rBox.Position = UDim2.new(0,230,0,30)
     rBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
     rBox.TextColor3 = Color3.fromRGB(255,255,255)
     rBox.TextScaled = true
     rBox.Text = "255"
     rBox.Parent = settingsContent
 
-    local gBox = rBox:Clone()
-    gBox.Position = UDim2.new(0,220,0,60)
+    gBox = rBox:Clone()
+    gBox.Position = UDim2.new(0,230,0,58)
     gBox.Text = "0"
     gBox.Parent = settingsContent
 
-    local bBox = rBox:Clone()
-    bBox.Position = UDim2.new(0,220,0,90)
+    bBox = rBox:Clone()
+    bBox.Position = UDim2.new(0,230,0,86)
     bBox.Text = "0"
     bBox.Parent = settingsContent
 
     local hexLabel = rgbLabel:Clone()
     hexLabel.Text = "HEX"
-    hexLabel.Position = UDim2.new(0,220,0,120)
+    hexLabel.Position = UDim2.new(0,230,0,114)
     hexLabel.Parent = settingsContent
 
-    local hexBox = rBox:Clone()
-    hexBox.Position = UDim2.new(0,220,0,145)
+    hexBox = rBox:Clone()
+    hexBox.Position = UDim2.new(0,230,0,139)
     hexBox.Text = "#FF0000"
     hexBox.Parent = settingsContent
 
-    local applyFill = Instance.new("TextButton")
+    applyFill = Instance.new("TextButton")
     applyFill.Size = UDim2.new(0,120,0,24)
-    applyFill.Position = UDim2.new(0,220,0,175)
+    applyFill.Position = UDim2.new(0,230,0,170)
     applyFill.BackgroundColor3 = Color3.fromRGB(60,120,60)
     applyFill.TextColor3 = Color3.fromRGB(255,255,255)
     applyFill.TextScaled = true
@@ -335,12 +342,12 @@ local function createUI()
     applyFill.Parent = settingsContent
     Instance.new("UICorner", applyFill).CornerRadius = UDim.new(0,4)
 
-    local applyOutline = applyFill:Clone()
+    applyOutline = applyFill:Clone()
     applyOutline.Text = "Apply to Outline"
-    applyOutline.Position = UDim2.new(0,220,0,205)
+    applyOutline.Position = UDim2.new(0,230,0,198)
     applyOutline.Parent = settingsContent
 
-    -- TAB SWITCHING
+    -- Tab switching
     local function setTab(which)
         mainContent.Visible = (which == "main")
         debugContent.Visible = (which == "debug")
@@ -359,13 +366,9 @@ local function createUI()
     mainTab.MouseButton1Click:Connect(function() setTab("main") end)
     debugTab.MouseButton1Click:Connect(function() setTab("debug") end)
     settingsTab.MouseButton1Click:Connect(function() setTab("settings") end)
-
-    return screenGui, mainFrame, resizeHandle, espToggle, stateLabel, killButton,
-           svSquare, hueBar, preview, rBox, gBox, bBox, hexBox, applyFill, applyOutline
 end
 
-local screenGui, mainFrame, resizeHandle, espToggle, stateLabel, killButton,
-      svSquare, hueBar, preview, rBox, gBox, bBox, hexBox, applyFill, applyOutline = createUI()
+createUI()
 
 ------------------------------------------------------------------
 -- RESIZABLE UI (SMOOTH)
@@ -395,7 +398,7 @@ do
             local dx = currentPos.X - startPos.X
             local dy = currentPos.Y - startPos.Y
 
-            local newW = math.max(280, startSize.X.Offset + dx)
+            local newW = math.max(300, startSize.X.Offset + dx)
             local newH = math.max(220, startSize.Y.Offset + dy)
 
             mainFrame.Size = UDim2.new(0,newW,0,newH)
@@ -404,7 +407,7 @@ do
 end
 
 ------------------------------------------------------------------
--- ESP COLOR PICKER LOGIC
+-- COLOR PICKER LOGIC
 ------------------------------------------------------------------
 
 local currentHue = 0
@@ -431,8 +434,8 @@ updateFromHSV()
 
 svSquare.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        local conn
-        conn = UserInputService.InputChanged:Connect(function(i)
+        local moveConn, endConn
+        moveConn = UserInputService.InputChanged:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseMovement then
                 local rel = i.Position - svSquare.AbsolutePosition
                 local sx = math.clamp(rel.X / svSquare.AbsoluteSize.X, 0, 1)
@@ -442,11 +445,10 @@ svSquare.InputBegan:Connect(function(input)
                 updateFromHSV()
             end
         end)
-        local endConn
         endConn = UserInputService.InputEnded:Connect(function(i2)
             if i2.UserInputType == Enum.UserInputType.MouseButton1 then
-                conn:Disconnect()
-                endConn:Disconnect()
+                if moveConn then moveConn:Disconnect() end
+                if endConn then endConn:Disconnect() end
             end
         end)
     end
@@ -454,8 +456,8 @@ end)
 
 hueBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        local conn
-        conn = UserInputService.InputChanged:Connect(function(i)
+        local moveConn, endConn
+        moveConn = UserInputService.InputChanged:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseMovement then
                 local rel = i.Position - hueBar.AbsolutePosition
                 local t = math.clamp(rel.Y / hueBar.AbsoluteSize.Y, 0, 1)
@@ -463,23 +465,19 @@ hueBar.InputBegan:Connect(function(input)
                 updateFromHSV()
             end
         end)
-        local endConn
         endConn = UserInputService.InputEnded:Connect(function(i2)
             if i2.UserInputType == Enum.UserInputType.MouseButton1 then
-                conn:Disconnect()
-                endConn:Disconnect()
+                if moveConn then moveConn:Disconnect() end
+                if endConn then endConn:Disconnect() end
             end
         end)
     end
 end)
 
 local function applyRGBBoxes()
-    local r = tonumber(rBox.Text) or 255
-    local g = tonumber(gBox.Text) or 0
-    local b = tonumber(bBox.Text) or 0
-    r = math.clamp(r,0,255)
-    g = math.clamp(g,0,255)
-    b = math.clamp(b,0,255)
+    local r = math.clamp(tonumber(rBox.Text) or 255,0,255)
+    local g = math.clamp(tonumber(gBox.Text) or 0,0,255)
+    local b = math.clamp(tonumber(bBox.Text) or 0,0,255)
     local color = Color3.fromRGB(r,g,b)
     preview.BackgroundColor3 = color
     hexBox.Text = ColorToHex(color)
