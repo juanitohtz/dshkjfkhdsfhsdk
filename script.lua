@@ -17,6 +17,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
 --// UI Creation
 local function createUI()
@@ -148,7 +149,6 @@ function ESP:Update()
                     self:CreatePixel(char)
                 end
 
-                -- Update color if color detection is enabled
                 if self.ColorDetection then
                     local root = self.Pixels[char].root
                     self.Pixels[char].frame.BackgroundColor3 = root.Color
@@ -186,9 +186,59 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
+------------------------------------------------------------------
+-- CENTER SCREEN RED PIXEL DETECTOR (NEW)
+------------------------------------------------------------------
+
+local clicked = false
+local centerMargin = 6
+
+local function DetectCenterRedPixel()
+
+    if not ESP.Enabled or not ESP.HoldKeyActive then
+        clicked = false
+        return
+    end
+
+    local centerX = Camera.ViewportSize.X / 2
+    local centerY = Camera.ViewportSize.Y / 2
+
+    for _, data in pairs(ESP.Pixels) do
+
+        local pos, visible = Camera:WorldToViewportPoint(data.root.Position)
+
+        if visible then
+
+            local dx = math.abs(pos.X - centerX)
+            local dy = math.abs(pos.Y - centerY)
+
+            if dx <= centerMargin and dy <= centerMargin then
+
+                local color = data.frame.BackgroundColor3
+
+                if color.R > 0.9 and color.G < 0.2 and color.B < 0.2 then
+
+                    if not clicked then
+                        clicked = true
+                        print("[RED DETECTED] Center pixel hit!")
+                        
+                        -- Place your click/fire code here if needed
+
+                    end
+
+                    return
+                end
+            end
+        end
+    end
+
+    clicked = false
+end
+
 --// Main loop
 RunService.RenderStepped:Connect(function()
     ESP:Update()
+    DetectCenterRedPixel()
 end)
 
 print("[ESP_UI] Loaded successfully.")
