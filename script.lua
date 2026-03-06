@@ -15,6 +15,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -87,7 +88,6 @@ ESP.Pixels = {}
 ESP.PixelSize = 14
 ESP.HoldKeyActive = false
 
--- Create pixel on HumanoidRootPart
 function ESP:CreatePixel(character)
     if not character or self.Pixels[character] then return end
 
@@ -187,7 +187,7 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 ------------------------------------------------------------------
--- CENTER SCREEN RED PIXEL DETECTOR (NEW)
+-- CENTER SCREEN RED PIXEL DETECTOR + MB1 CLICK
 ------------------------------------------------------------------
 
 local clicked = false
@@ -220,9 +220,9 @@ local function DetectCenterRedPixel()
 
                     if not clicked then
                         clicked = true
-                        print("[RED DETECTED] Center pixel hit!")
-                        
-                        -- Place your click/fire code here if needed
+
+                        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 0)
+                        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 0)
 
                     end
 
