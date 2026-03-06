@@ -1,7 +1,9 @@
 --[[ 
-    Roblox ESP Pixel Overlay System
-    Modified: Uses Highlight instead of Billboard pixels
-    Updated: L toggles ESP, V on hold activates trigger
+    Roblox ESP + Triggerbot System
+    Controls:
+        L = Toggle ESP system
+        Hold V = Triggerbot
+        RightShift = Toggle UI visibility
 ]]
 
 --// Services
@@ -13,7 +15,10 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
---// UI Creation
+------------------------------------------------------------------
+-- UI CREATION (CLEANER + TOGGLEABLE)
+------------------------------------------------------------------
+
 local function createUI()
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "ESP_UI"
@@ -22,26 +27,31 @@ local function createUI()
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0,260,0,180)
+    mainFrame.Size = UDim2.new(0,260,0,160)
     mainFrame.Position = UDim2.new(0,20,0,20)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
     mainFrame.BorderSizePixel = 0
     mainFrame.Active = true
     mainFrame.Draggable = true
     mainFrame.Parent = screenGui
 
+    local corner = Instance.new("UICorner", mainFrame)
+    corner.CornerRadius = UDim.new(0,8)
+
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1,0,0,30)
-    title.BackgroundColor3 = Color3.fromRGB(35,35,35)
-    title.Text = "ESP Highlight System"
+    title.Size = UDim2.new(1,0,0,32)
+    title.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    title.Text = "ESP + Triggerbot"
     title.TextColor3 = Color3.fromRGB(255,255,255)
     title.TextScaled = true
     title.BorderSizePixel = 0
     title.Parent = mainFrame
 
+    Instance.new("UICorner", title).CornerRadius = UDim.new(0,8)
+
     local espToggle = Instance.new("TextButton")
     espToggle.Size = UDim2.new(0,220,0,40)
-    espToggle.Position = UDim2.new(0,20,0,45)
+    espToggle.Position = UDim2.new(0,20,0,50)
     espToggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
     espToggle.TextColor3 = Color3.fromRGB(255,255,255)
     espToggle.TextScaled = true
@@ -49,27 +59,40 @@ local function createUI()
     espToggle.BorderSizePixel = 0
     espToggle.Parent = mainFrame
 
+    Instance.new("UICorner", espToggle).CornerRadius = UDim.new(0,6)
+
     local info = Instance.new("TextLabel")
     info.Size = UDim2.new(1,-10,0,20)
     info.Position = UDim2.new(0,5,1,-25)
     info.BackgroundTransparency = 1
     info.TextColor3 = Color3.fromRGB(180,180,180)
     info.TextScaled = true
-    info.Text = "Press L to toggle ESP | Hold V to trigger"
+    info.Text = "L = Toggle ESP | Hold V = Trigger | RightShift = Hide UI"
     info.Parent = mainFrame
 
-    return espToggle
+    return screenGui, mainFrame, espToggle
 end
 
-local espToggle = createUI()
+local screenGui, mainFrame, espToggle = createUI()
 
---// ESP System
+local uiVisible = true
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        uiVisible = not uiVisible
+        mainFrame.Visible = uiVisible
+    end
+end)
+
+------------------------------------------------------------------
+-- ESP SYSTEM
+------------------------------------------------------------------
+
 local ESP = {}
-ESP.Enabled = false
+ESP.Enabled = false        -- UI toggle
+ESP.ToggleActive = false   -- L key toggle
 ESP.Pixels = {}
-ESP.ToggleActive = false
-
-local MB5Held = false
 
 function ESP:CreatePixel(character)
     if not character or self.Pixels[character] then return end
@@ -95,7 +118,7 @@ function ESP:RemovePixel(character)
 end
 
 function ESP:ClearAll()
-    for _,highlight in pairs(self.Pixels) do
+    for _, highlight in pairs(self.Pixels) do
         highlight:Destroy()
     end
     self.Pixels = {}
@@ -107,7 +130,7 @@ function ESP:Update()
         return
     end
 
-    for _,player in ipairs(Players:GetPlayers()) do
+    for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             local char = player.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
@@ -121,7 +144,10 @@ function ESP:Update()
     end
 end
 
---// UI Toggle
+------------------------------------------------------------------
+-- UI BUTTON TOGGLE
+------------------------------------------------------------------
+
 espToggle.MouseButton1Click:Connect(function()
     ESP.Enabled = not ESP.Enabled
     espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
@@ -129,43 +155,38 @@ espToggle.MouseButton1Click:Connect(function()
 end)
 
 ------------------------------------------------------------------
--- INPUT SYSTEM (L KEY TOGGLE ESP, V HOLD FOR TRIGGERBOT)
+-- INPUT SYSTEM (L TOGGLE ESP, HOLD V FOR TRIGGERBOT)
 ------------------------------------------------------------------
 
 local TriggerHeld = false
 
-UserInputService.InputBegan:Connect(function(input,gp)
+UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
 
-    -- L now toggles ESP active state
     if input.KeyCode == Enum.KeyCode.L then
         ESP.ToggleActive = not ESP.ToggleActive
-        if not ESP.ToggleActive then
-            ESP:ClearAll()
-        end
+        if not ESP.ToggleActive then ESP:ClearAll() end
     end
 
-    -- V now is the hold key for trigger
     if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = true
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    -- Release V stops trigger
     if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = false
     end
 end)
 
 ------------------------------------------------------------------
--- CENTER SCREEN TRIGGERBOT (RAYCAST)
+-- TRIGGERBOT (WORKS EVEN IF ESP IS OFF)
 ------------------------------------------------------------------
 
 local clicked = false
 
 local function DetectCenterTarget()
-    if not ESP.Enabled or not ESP.ToggleActive or not TriggerHeld then
+    if not ESP.ToggleActive or not TriggerHeld then
         clicked = false
         return
     end
@@ -181,15 +202,11 @@ local function DetectCenterTarget()
 
     local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
 
-    if result and result.Instance then
-        local part = result.Instance
-        local model = part:FindFirstAncestorOfClass("Model")
-
+    if result then
+        local model = result.Instance:FindFirstAncestorOfClass("Model")
         if model and Players:GetPlayerFromCharacter(model) then
             if not clicked then
                 clicked = true
-
-                -- REAL mouse click (executor-provided)
                 mouse1press()
                 task.wait()
                 mouse1release()
@@ -201,7 +218,10 @@ local function DetectCenterTarget()
     clicked = false
 end
 
---// Main loop
+------------------------------------------------------------------
+-- MAIN LOOP
+------------------------------------------------------------------
+
 RunService.RenderStepped:Connect(function()
     ESP:Update()
     DetectCenterTarget()
