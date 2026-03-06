@@ -204,7 +204,7 @@ local clicked = false
 
 local function DetectCenterRedPixel()
 
-    if not MB5Held then
+    if not ESP.Enabled or not ESP.ToggleActive or not MB5Held then
         clicked = false
         return
     end
@@ -214,7 +214,7 @@ local function DetectCenterRedPixel()
 
     for char,data in pairs(ESP.Pixels) do
 
-        if char then
+        if char and data.root then
 
             local minX, minY = math.huge, math.huge
             local maxX, maxY = -math.huge, -math.huge
