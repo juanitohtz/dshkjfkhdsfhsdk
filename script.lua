@@ -132,7 +132,7 @@ end
 
 function ESP:Update()
 
-    if not ESP.Enabled or not ESP.ToggleActive then
+    if not self.Enabled or not self.ToggleActive then
         self:ClearAll()
         return
     end
@@ -214,7 +214,7 @@ local function DetectCenterRedPixel()
 
     for char,data in pairs(ESP.Pixels) do
 
-        if char and data.root then
+        if char then
 
             local minX, minY = math.huge, math.huge
             local maxX, maxY = -math.huge, -math.huge
