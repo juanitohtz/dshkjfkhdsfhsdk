@@ -1,6 +1,7 @@
 --[[
     Roblox ESP Pixel Overlay System
     Modified: Uses Highlight instead of Billboard pixels
+    Updated: V toggles ESP, MB5 activates trigger
 ]]
 
 --// Services
@@ -64,7 +65,7 @@ local function createUI()
     info.BackgroundTransparency = 1
     info.TextColor3 = Color3.fromRGB(180,180,180)
     info.TextScaled = true
-    info.Text = "Hold V to activate ESP"
+    info.Text = "Press V to toggle ESP | Hold MB5 to trigger"
     info.Parent = mainFrame
 
     return espToggle, colorToggle
@@ -77,7 +78,9 @@ local ESP = {}
 ESP.Enabled = false
 ESP.ColorDetection = false
 ESP.Pixels = {}
-ESP.HoldKeyActive = false
+ESP.ToggleActive = false
+
+local MB5Held = false
 
 function ESP:CreatePixel(character)
 
@@ -91,7 +94,6 @@ function ESP:CreatePixel(character)
     highlight.OutlineTransparency = 0
     highlight.Adornee = character
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-
     highlight.Parent = character
 
     local root = character:FindFirstChild("HumanoidRootPart")
@@ -120,11 +122,9 @@ end
 function ESP:ClearAll()
 
     for char,data in pairs(self.Pixels) do
-
         if data.highlight then
             data.highlight:Destroy()
         end
-
     end
 
     self.Pixels = {}
@@ -132,7 +132,7 @@ end
 
 function ESP:Update()
 
-    if not self.Enabled or not self.HoldKeyActive then
+    if not self.Enabled or not self.ToggleActive then
         self:ClearAll()
         return
     end
@@ -168,18 +168,32 @@ colorToggle.MouseButton1Click:Connect(function()
     colorToggle.Text = ESP.ColorDetection and "Color Detection: ON" or "Color Detection: OFF"
 end)
 
---// HOLD V
-UserInputService.InputBegan:Connect(function(input)
+--// INPUT SYSTEM
+
+UserInputService.InputBegan:Connect(function(input,gp)
+
+    if gp then return end
+
     if input.KeyCode == Enum.KeyCode.V then
-        ESP.HoldKeyActive = true
+        ESP.ToggleActive = not ESP.ToggleActive
+
+        if not ESP.ToggleActive then
+            ESP:ClearAll()
+        end
     end
+
+    if input.UserInputType == Enum.UserInputType.MouseButton5 then
+        MB5Held = true
+    end
+
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.V then
-        ESP.HoldKeyActive = false
-        ESP:ClearAll()
+
+    if input.UserInputType == Enum.UserInputType.MouseButton5 then
+        MB5Held = false
     end
+
 end)
 
 ------------------------------------------------------------------
@@ -190,7 +204,7 @@ local clicked = false
 
 local function DetectCenterRedPixel()
 
-    if not ESP.Enabled or not ESP.HoldKeyActive then
+    if not ESP.Enabled or not ESP.ToggleActive or not MB5Held then
         clicked = false
         return
     end
