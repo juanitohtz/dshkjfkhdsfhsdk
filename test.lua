@@ -22,7 +22,7 @@ local Connections = {}
 
 local ESP = {
     Enabled = false,
-    Armed = false, -- no longer used for triggerbot/debug ★
+    Armed = false,
     Pixels = {},
     FillColor = Color3.fromRGB(255,0,0),
     OutlineColor = Color3.fromRGB(255,255,255)
@@ -30,8 +30,6 @@ local ESP = {
 
 local TriggerHeld = false
 local TriggerState = "DISARMED"
-
-local SystemArmed = false -- ★ NEW: triggerbot + debugger use this
 
 ------------------------------------------------------------------
 -- COLOR HELPERS
@@ -236,7 +234,8 @@ local function createUI()
     debugInfo.TextColor3 = Color3.fromRGB(200,200,200)
     debugInfo.TextScaled = true
     debugInfo.TextWrapped = true
-    debugInfo.Text = "DISARMED: L off\nARMED: L on\nHOLDING: L on + V held\nLOCKED & FIRING: enemy in center"
+    -- updated to reflect the 3 main stages
+    debugInfo.Text = "DISARMED: L off\nARMED: L on\nHOLDING: L on + V held\nTARGET: enemy in center"
     debugInfo.Parent = debugContent
 
     -- Settings content
@@ -364,4 +363,326 @@ local function createUI()
 
     mainTab.MouseButton1Click:Connect(function() setTab("main") end)
     debugTab.MouseButton1Click:Connect(function() setTab("debug") end)
-    settingsTab.MouseButton1
+    settingsTab.MouseButton1Click:Connect(function() setTab("settings") end)
+end
+
+createUI()
+
+------------------------------------------------------------------
+-- RESIZABLE UI
+------------------------------------------------------------------
+
+do
+    local resizing = false
+    local startPos, startSize
+
+    resizeHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            resizing = true
+            startPos = UserInputService:GetMouseLocation()
+            startSize = mainFrame.Size
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            resizing = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local currentPos = UserInputService:GetMouseLocation()
+            local dx = currentPos.X - startPos.X
+            local dy = currentPos.Y - startPos.Y
+
+            local newW = math.max(300, startSize.X.Offset + dx)
+            local newH = math.max(220, startSize.Y.Offset + dy)
+
+            mainFrame.Size = UDim2.new(0,newW,0,newH)
+        end
+    end)
+end
+
+------------------------------------------------------------------
+-- COLOR PICKER LOGIC (HTMLColorCodes-STYLE)
+------------------------------------------------------------------
+
+local currentHue = 0
+local currentS = 1
+local currentV = 1
+
+local function updateFromHSV()
+    local color = HSVToRGB(currentHue, currentS, currentV)
+    preview.BackgroundColor3 = color
+    svSquare.BackgroundColor3 = HSVToRGB(currentHue, 1, 1)
+end
+
+updateFromHSV()
+
+svSquare.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local moveConn, endConn
+        moveConn = UserInputService.InputChanged:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseMovement then
+                local rel = i.Position - svSquare.AbsolutePosition
+                local sx = math.clamp(rel.X / svSquare.AbsoluteSize.X, 0, 1)
+                local sy = math.clamp(rel.Y / svSquare.AbsoluteSize.Y, 0, 1)
+                currentS = sx
+                currentV = 1 - sy
+                updateFromHSV()
+            end
+        end)
+        endConn = UserInputService.InputEnded:Connect(function(i2)
+            if i2.UserInputType == Enum.UserInputType.MouseButton1 then
+                if moveConn then moveConn:Disconnect() end
+                if endConn then endConn:Disconnect() end
+            end
+        end)
+    end
+end)
+
+hueBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local moveConn, endConn
+        moveConn = UserInputService.InputChanged:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseMovement then
+                local rel = i.Position - hueBar.AbsolutePosition
+                local t = math.clamp(rel.Y / hueBar.AbsoluteSize.Y, 0, 1)
+                currentHue = t * 360
+                updateFromHSV()
+            end
+        end)
+        endConn = UserInputService.InputEnded:Connect(function(i2)
+            if i2.UserInputType == Enum.UserInputType.MouseButton1 then
+                if moveConn then moveConn:Disconnect() end
+                if endConn then endConn:Disconnect() end
+            end
+        end)
+    end
+end)
+
+local function UpdateESPColors()
+    for _, highlight in pairs(ESP.Pixels) do
+        highlight.FillColor = ESP.FillColor
+        highlight.OutlineColor = ESP.OutlineColor
+    end
+end
+
+applyFill.MouseButton1Click:Connect(function()
+    ESP.FillColor = preview.BackgroundColor3
+    UpdateESPColors()
+end)
+
+applyOutline.MouseButton1Click:Connect(function()
+    ESP.OutlineColor = preview.BackgroundColor3
+    UpdateESPColors()
+end)
+
+------------------------------------------------------------------
+-- ESP FUNCTIONS
+------------------------------------------------------------------
+
+function ESP:CreatePixel(character)
+    if not character or self.Pixels[character] then return end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESP_Highlight"
+    highlight.FillColor = self.FillColor
+    highlight.FillTransparency = 0.5
+    highlight.OutlineColor = self.OutlineColor
+    highlight.OutlineTransparency = 0
+    highlight.Adornee = character
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = character
+
+    self.Pixels[character] = highlight
+end
+
+function ESP:RemovePixel(character)
+    if character and self.Pixels[character] then
+        self.Pixels[character]:Destroy()
+        self.Pixels[character] = nil
+    end
+end
+
+function ESP:ClearAll()
+    for _, h in pairs(self.Pixels) do
+        h:Destroy()
+    end
+    self.Pixels = {}
+end
+
+function ESP:Update()
+    if not self.Enabled or not self.Armed then
+        self:ClearAll()
+        return
+    end
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local char = plr.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                if not self.Pixels[char] then
+                    self:CreatePixel(char)
+                end
+            else
+                self:RemovePixel(char)
+            end
+        end
+    end
+end
+
+------------------------------------------------------------------
+-- KILL SCRIPT
+------------------------------------------------------------------
+
+local function KillScript()
+    Running = false
+    ESP:ClearAll()
+    if screenGui then
+        screenGui:Destroy()
+    end
+    for _, conn in ipairs(Connections) do
+        pcall(function() conn:Disconnect() end)
+    end
+end
+
+table.insert(Connections, killButton.MouseButton1Click:Connect(KillScript))
+
+------------------------------------------------------------------
+-- UI TOGGLE + ESP BUTTON
+------------------------------------------------------------------
+
+table.insert(Connections, UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        if mainFrame then
+            mainFrame.Visible = not mainFrame.Visible
+        end
+    end
+end))
+
+table.insert(Connections, espToggle.MouseButton1Click:Connect(function()
+    ESP.Enabled = not ESP.Enabled
+    espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
+    if not ESP.Enabled then
+        ESP:ClearAll()
+    end
+end))
+
+------------------------------------------------------------------
+-- INPUT: L (ARM), V (HOLD)
+------------------------------------------------------------------
+
+table.insert(Connections, UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+
+    if input.KeyCode == Enum.KeyCode.L then
+        ESP.Armed = not ESP.Armed
+        if ESP.Armed then
+            TriggerState = "ARMED"
+        else
+            TriggerState = "DISARMED"
+            ESP:ClearAll()
+        end
+    end
+
+    if input.KeyCode == Enum.KeyCode.V then
+        TriggerHeld = true
+        if ESP.Armed then
+            TriggerState = "HOLDING"
+        end
+    end
+end))
+
+table.insert(Connections, UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.V then
+        TriggerHeld = false
+        if ESP.Armed then
+            TriggerState = "ARMED"
+        else
+            TriggerState = "DISARMED"
+        end
+    end
+end))
+
+------------------------------------------------------------------
+-- TRIGGERBOT
+------------------------------------------------------------------
+
+local clicked = false
+
+local function DetectCenterTarget()
+    -- DISARMED: system not armed with L
+    if not ESP.Armed then
+        TriggerState = "DISARMED"
+        clicked = false
+        return
+    end
+
+    -- ARMED: L on, but V not held
+    if not TriggerHeld then
+        TriggerState = "ARMED"
+        clicked = false
+        return
+    end
+
+    -- HOLDING: L on + V held, checking for target
+    TriggerState = "HOLDING"
+
+    if not Camera then
+        Camera = workspace.CurrentCamera
+        if not Camera then return end
+    end
+
+    local centerX = Camera.ViewportSize.X / 2
+    local centerY = Camera.ViewportSize.Y / 2
+
+    local ray = Camera:ViewportPointToRay(centerX, centerY)
+
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {LocalPlayer.Character}
+
+    local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
+
+    if result and result.Instance then
+        local part = result.Instance
+        local model = part:FindFirstAncestorOfClass("Model")
+
+        if model then
+            local playerHit = Players:GetPlayerFromCharacter(model)
+            if playerHit and playerHit ~= LocalPlayer then
+                -- TARGET: enemy detected in center
+                TriggerState = "TARGET"
+
+                if not clicked then
+                    clicked = true
+                    mouse1press()
+                    task.wait()
+                    mouse1release()
+                end
+
+                return
+            end
+        end
+    end
+
+    -- still holding, but no valid target
+    TriggerState = "HOLDING"
+    clicked = false
+end
+
+------------------------------------------------------------------
+-- MAIN LOOP
+------------------------------------------------------------------
+
+table.insert(Connections, RunService.RenderStepped:Connect(function()
+    if not Running then return end
+    ESP:Update()
+    DetectCenterTarget()
+    if stateLabel then
+        stateLabel.Text = "Trigger state: " .. TriggerState
+    end
+end))
