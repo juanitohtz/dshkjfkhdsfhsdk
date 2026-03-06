@@ -183,7 +183,7 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 ------------------------------------------------------------------
--- CENTER SCREEN DETECTOR + MB1 CLICK
+-- CENTER SCREEN DETECTOR + MB1 CLICK (FULL BODY)
 ------------------------------------------------------------------
 
 local clicked = false
@@ -199,26 +199,35 @@ local function DetectCenterRedPixel()
     local centerX = Camera.ViewportSize.X/2
     local centerY = Camera.ViewportSize.Y/2
 
-    for _,data in pairs(ESP.Pixels) do
+    for char,data in pairs(ESP.Pixels) do
 
-        local pos,visible = Camera:WorldToViewportPoint(data.root.Position)
+        if char then
 
-        if visible then
+            for _,part in ipairs(char:GetChildren()) do
 
-            local dx = math.abs(pos.X-centerX)
-            local dy = math.abs(pos.Y-centerY)
+                if part:IsA("BasePart") then
 
-            if dx <= centerMargin and dy <= centerMargin then
+                    local pos,visible = Camera:WorldToViewportPoint(part.Position)
 
-                if not clicked then
-                    clicked = true
+                    if visible then
 
-                    VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,true,game,0)
-                    VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,false,game,0)
+                        local dx = math.abs(pos.X-centerX)
+                        local dy = math.abs(pos.Y-centerY)
 
+                        if dx <= centerMargin and dy <= centerMargin then
+
+                            if not clicked then
+                                clicked = true
+
+                                VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,true,game,0)
+                                VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,false,game,0)
+
+                            end
+
+                            return
+                        end
+                    end
                 end
-
-                return
             end
         end
     end
