@@ -5,7 +5,9 @@
     - UI menu with toggle button
     - ESP pixels above all other players
     - Larger, more visible pixels with outline
-    - HOLD V keybind: ESP only works while V is held
+    - Pixel stays same size at ANY distance
+    - Pixel attached to HumanoidRootPart
+    - HOLD V to activate ESP
     - Uses only Roblox APIs (safe & allowed)
 ]]
 
@@ -71,20 +73,28 @@ local ESP = {}
 ESP.Enabled = false
 ESP.Pixels = {}
 ESP.Color = Color3.fromRGB(255, 0, 0)
-ESP.PixelSize = 14 -- Bigger & more visible
+ESP.PixelSize = 14
 ESP.HoldKeyActive = false
 
--- Create pixel above head
+-- Create pixel on HumanoidRootPart
 function ESP:CreatePixel(character)
     if not character or self.Pixels[character] then return end
 
-    local head = character:FindFirstChild("Head")
-    if not head then return end
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
 
     local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP_Pixel"
     billboard.Size = UDim2.new(0, self.PixelSize, 0, self.PixelSize)
     billboard.AlwaysOnTop = true
-    billboard.Adornee = head
+    billboard.Adornee = root
+
+    -- keeps pixel same size at ANY distance
+    billboard.MaxDistance = math.huge
+    billboard.LightInfluence = 0
+    billboard.SizeOffset = Vector2.new(0, 0)
+    billboard.StudsOffset = Vector3.new(0, 2, 0)
+
     billboard.Parent = LocalPlayer.PlayerGui
 
     local frame = Instance.new("Frame")
@@ -101,7 +111,6 @@ function ESP:CreatePixel(character)
     self.Pixels[character] = billboard
 end
 
--- Remove pixel
 function ESP:RemovePixel(character)
     if self.Pixels[character] then
         self.Pixels[character]:Destroy()
@@ -109,7 +118,6 @@ function ESP:RemovePixel(character)
     end
 end
 
--- Clear all
 function ESP:ClearAll()
     for char, gui in pairs(self.Pixels) do
         gui:Destroy()
@@ -117,7 +125,6 @@ function ESP:ClearAll()
     self.Pixels = {}
 end
 
--- Update loop
 function ESP:Update()
     if not self.Enabled or not self.HoldKeyActive then
         self:ClearAll()
@@ -127,7 +134,7 @@ function ESP:Update()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             local char = player.Character
-            if char and char:FindFirstChild("Head") then
+            if char and char:FindFirstChild("HumanoidRootPart") then
                 self:CreatePixel(char)
             else
                 self:RemovePixel(char)
