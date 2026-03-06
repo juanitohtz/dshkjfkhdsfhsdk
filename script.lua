@@ -13,6 +13,7 @@ local Camera = workspace.CurrentCamera
 
 --// UI Creation
 local function createUI()
+
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "ESP_UI"
     screenGui.ResetOnSpawn = false
@@ -85,15 +86,19 @@ function ESP:CreatePixel(character)
     local root = character:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
-    -- save original color
-    local originalColor = root.Color
-
-    -- color torso
-    root.Color = Color3.fromRGB(255,0,0)
+    -- Create HRP highlight
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "HRP_ESP"
+    highlight.Adornee = root
+    highlight.FillColor = Color3.fromRGB(255,0,0)
+    highlight.OutlineColor = Color3.fromRGB(255,0,0)
+    highlight.FillTransparency = 0.4
+    highlight.OutlineTransparency = 0
+    highlight.Parent = root
 
     self.Pixels[character] = {
         root = root,
-        original = originalColor
+        highlight = highlight
     }
 end
 
@@ -103,8 +108,8 @@ function ESP:RemovePixel(character)
 
         local data = self.Pixels[character]
 
-        if data.root and data.root.Parent then
-            data.root.Color = data.original
+        if data.highlight and data.highlight.Parent then
+            data.highlight:Destroy()
         end
 
         self.Pixels[character] = nil
@@ -115,8 +120,8 @@ function ESP:ClearAll()
 
     for char,data in pairs(self.Pixels) do
 
-        if data.root and data.root.Parent then
-            data.root.Color = data.original
+        if data.highlight and data.highlight.Parent then
+            data.highlight:Destroy()
         end
 
     end
@@ -188,7 +193,7 @@ end)
 ------------------------------------------------------------------
 
 local clicked = false
-local centerMargin = 6
+local centerMargin = 12
 
 local function DetectCenterRedPixel()
 
@@ -211,20 +216,15 @@ local function DetectCenterRedPixel()
 
             if dx <= centerMargin and dy <= centerMargin then
 
-                local color = data.root.Color
+                if not clicked then
+                    clicked = true
 
-                if color.R > 0.9 and color.G < 0.2 and color.B < 0.2 then
+                    VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,true,game,0)
+                    VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,false,game,0)
 
-                    if not clicked then
-                        clicked = true
-
-                        VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,true,game,0)
-                        VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,false,game,0)
-
-                    end
-
-                    return
                 end
+
+                return
             end
         end
     end
