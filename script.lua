@@ -1,13 +1,5 @@
 --[[
-    Roblox HRP ESP + Center Triggerbot
-    -----------------------------------
-    Features:
-    - UI menu
-    - ESP colors enemy HumanoidRootPart red
-    - Hold V to activate
-    - Detects HRP in center of screen
-    - Sends MB1 click
-    - Unload button destroys everything
+    Roblox HRP ESP + Triggerbot
 ]]
 
 --// Services
@@ -24,10 +16,6 @@ local Camera = workspace.CurrentCamera
 ------------------------------------------------------------------
 
 local connections = {}
-local ESP = {}
-ESP.Enabled = false
-ESP.HoldKeyActive = false
-ESP.Targets = {}
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ESP_UI"
@@ -82,22 +70,22 @@ info.Text = "Hold V to activate"
 info.Parent = mainFrame
 
 ------------------------------------------------------------------
--- ESP HRP Coloring
+-- ESP SYSTEM
 ------------------------------------------------------------------
 
-function ESP:Apply(player)
+local ESP = {}
+ESP.Enabled = false
+ESP.HoldKeyActive = false
+ESP.Targets = {}
 
-    if player == LocalPlayer then return end
+function ESP:Apply(character)
 
-    local char = player.Character
-    if not char then return end
+    if self.Targets[character] then return end
 
-    local root = char:FindFirstChild("HumanoidRootPart")
+    local root = character:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
-    if self.Targets[player] then return end
-
-    self.Targets[player] = {
+    self.Targets[character] = {
         part = root,
         originalColor = root.Color,
         originalMaterial = root.Material
@@ -109,21 +97,30 @@ function ESP:Apply(player)
 end
 
 
-function ESP:Clear()
+function ESP:Remove(character)
 
-    for player,data in pairs(self.Targets) do
-        if data.part then
-            data.part.Color = data.originalColor
-            data.part.Material = data.originalMaterial
-        end
+    local data = self.Targets[character]
+
+    if data and data.part then
+        data.part.Color = data.originalColor
+        data.part.Material = data.originalMaterial
     end
 
-    self.Targets = {}
+    self.Targets[character] = nil
+
+end
+
+
+function ESP:Clear()
+
+    for char,_ in pairs(self.Targets) do
+        self:Remove(char)
+    end
 
 end
 
 ------------------------------------------------------------------
--- Triggerbot
+-- TRIGGERBOT
 ------------------------------------------------------------------
 
 local clicked = false
@@ -154,23 +151,8 @@ local function DetectCenter()
 
                     clicked = true
 
-                    VirtualInputManager:SendMouseButtonEvent(
-                        centerX,
-                        centerY,
-                        0,
-                        true,
-                        game,
-                        0
-                    )
-
-                    VirtualInputManager:SendMouseButtonEvent(
-                        centerX,
-                        centerY,
-                        0,
-                        false,
-                        game,
-                        0
-                    )
+                    VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,true,game,0)
+                    VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,false,game,0)
 
                 end
 
@@ -180,10 +162,11 @@ local function DetectCenter()
     end
 
     clicked = false
+
 end
 
 ------------------------------------------------------------------
--- Input
+-- INPUT
 ------------------------------------------------------------------
 
 table.insert(connections,
@@ -202,6 +185,7 @@ UserInputService.InputEnded:Connect(function(input)
 
     if input.KeyCode == Enum.KeyCode.V then
         ESP.HoldKeyActive = false
+        ESP:Clear()
     end
 
 end))
@@ -213,7 +197,6 @@ end))
 espToggle.MouseButton1Click:Connect(function()
 
     ESP.Enabled = not ESP.Enabled
-
     espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
 
     if not ESP.Enabled then
@@ -223,7 +206,7 @@ espToggle.MouseButton1Click:Connect(function()
 end)
 
 ------------------------------------------------------------------
--- Unload
+-- UNLOAD
 ------------------------------------------------------------------
 
 unloadBtn.MouseButton1Click:Connect(function()
@@ -243,7 +226,7 @@ unloadBtn.MouseButton1Click:Connect(function()
 end)
 
 ------------------------------------------------------------------
--- Main Loop
+-- MAIN LOOP
 ------------------------------------------------------------------
 
 table.insert(connections,
@@ -252,11 +235,22 @@ RunService.RenderStepped:Connect(function()
     if ESP.Enabled and ESP.HoldKeyActive then
 
         for _,player in ipairs(Players:GetPlayers()) do
-            ESP:Apply(player)
+
+            if player ~= LocalPlayer then
+
+                local char = player.Character
+
+                if char then
+                    ESP:Apply(char)
+                end
+
+            end
         end
 
     else
+
         ESP:Clear()
+
     end
 
     DetectCenter()
