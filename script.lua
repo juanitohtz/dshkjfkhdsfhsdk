@@ -1,14 +1,5 @@
 --[[
     Roblox ESP Pixel Overlay System
-    --------------------------------
-    Features:
-    - UI menu with toggle buttons
-    - ESP pixels on HumanoidRootPart
-    - Pixel stays same size at ANY distance
-    - Optional color detection (pixel color matches HRP color)
-    - Larger, more visible pixels with outline
-    - HOLD V to activate ESP
-    - Uses only Roblox APIs (safe & allowed)
 ]]
 
 --// Services
@@ -85,7 +76,7 @@ local ESP = {}
 ESP.Enabled = false
 ESP.ColorDetection = false
 ESP.Pixels = {}
-ESP.PixelSize = 14
+ESP.PixelSize = 75 -- 🔥 CHANGED (was 14)
 ESP.HoldKeyActive = false
 
 function ESP:CreatePixel(character)
@@ -99,23 +90,21 @@ function ESP:CreatePixel(character)
     billboard.Size = UDim2.new(0, self.PixelSize, 0, self.PixelSize)
     billboard.AlwaysOnTop = true
     billboard.Adornee = root
-
     billboard.MaxDistance = math.huge
     billboard.LightInfluence = 0
-    billboard.SizeOffset = Vector2.new(0, 0)
-    billboard.StudsOffset = Vector3.new(0, 0, 0)
-
+    billboard.SizeOffset = Vector2.new(0,0)
+    billboard.StudsOffset = Vector3.new(0,0,0)
     billboard.Parent = LocalPlayer.PlayerGui
 
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 1, 0)
-    frame.BackgroundColor3 = self.ColorDetection and root.Color or Color3.fromRGB(255, 0, 0)
+    frame.Size = UDim2.new(1,0,1,0)
+    frame.BackgroundColor3 = self.ColorDetection and root.Color or Color3.fromRGB(255,0,0)
     frame.BorderSizePixel = 0
     frame.Parent = billboard
 
     local outline = Instance.new("UIStroke")
     outline.Thickness = 2
-    outline.Color = Color3.fromRGB(255, 255, 255)
+    outline.Color = Color3.fromRGB(255,255,255)
     outline.Parent = frame
 
     self.Pixels[character] = {gui = billboard, frame = frame, root = root}
@@ -129,7 +118,7 @@ function ESP:RemovePixel(character)
 end
 
 function ESP:ClearAll()
-    for char, data in pairs(self.Pixels) do
+    for char,data in pairs(self.Pixels) do
         data.gui:Destroy()
     end
     self.Pixels = {}
@@ -141,7 +130,7 @@ function ESP:Update()
         return
     end
 
-    for _, player in ipairs(Players:GetPlayers()) do
+    for _,player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             local char = player.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
@@ -172,7 +161,7 @@ colorToggle.MouseButton1Click:Connect(function()
     colorToggle.Text = ESP.ColorDetection and "Color Detection: ON" or "Color Detection: OFF"
 end)
 
---// HOLD V keybind
+--// HOLD V
 UserInputService.InputBegan:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.V then
         ESP.HoldKeyActive = true
@@ -187,7 +176,7 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 ------------------------------------------------------------------
--- CENTER SCREEN RED PIXEL DETECTOR + MB1 CLICK
+-- CENTER SCREEN RED PIXEL DETECTOR
 ------------------------------------------------------------------
 
 local clicked = false
@@ -200,29 +189,29 @@ local function DetectCenterRedPixel()
         return
     end
 
-    local centerX = Camera.ViewportSize.X / 2
-    local centerY = Camera.ViewportSize.Y / 2
+    local centerX = Camera.ViewportSize.X/2
+    local centerY = Camera.ViewportSize.Y/2
 
-    for _, data in pairs(ESP.Pixels) do
+    for _,data in pairs(ESP.Pixels) do
 
-        local pos, visible = Camera:WorldToViewportPoint(data.root.Position)
+        local pos,visible = Camera:WorldToViewportPoint(data.root.Position)
 
         if visible then
 
-            local dx = math.abs(pos.X - centerX)
-            local dy = math.abs(pos.Y - centerY)
+            local dx = math.abs(pos.X-centerX)
+            local dy = math.abs(pos.Y-centerY)
 
             if dx <= centerMargin and dy <= centerMargin then
 
                 local color = data.frame.BackgroundColor3
 
-                if color.R > 0.9 and color.G < 0.2 and color.B < 0.2 then
+                if color.R>0.9 and color.G<0.2 and color.B<0.2 then
 
                     if not clicked then
                         clicked = true
 
-                        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 0)
-                        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 0)
+                        VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,true,game,0)
+                        VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,false,game,0)
 
                     end
 
@@ -232,10 +221,9 @@ local function DetectCenterRedPixel()
         end
     end
 
-    clicked = false
+    clicked=false
 end
 
---// Main loop
 RunService.RenderStepped:Connect(function()
     ESP:Update()
     DetectCenterRedPixel()
