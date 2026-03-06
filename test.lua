@@ -1,25 +1,37 @@
---[[ 
-    Roblox ESP + Triggerbot System
-    Controls:
-        L = Toggle ESP system (arm/disarm)
-        Hold V = Triggerbot
-        RightShift = Toggle UI visibility
+--[[
+    ESP + Triggerbot (L toggle, V hold) + Kill Button
+    L = Arm/Disarm system (ESP + Trigger)
+    Hold V = Triggerbot
+    RightShift = Toggle UI visibility
 ]]
 
 --// Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 ------------------------------------------------------------------
--- UI CREATION (TABS + DEBUG)
+-- STATE
 ------------------------------------------------------------------
 
-local TriggerState = "DISARMED" -- for debug tab
+local Running = true
+local Connections = {}
+
+local ESP = {
+    Enabled = false,      -- visuals
+    Armed = false,        -- system armed (L)
+    Pixels = {}
+}
+
+local TriggerHeld = false
+local TriggerState = "DISARMED"
+
+------------------------------------------------------------------
+-- UI
+------------------------------------------------------------------
 
 local function createUI()
     local screenGui = Instance.new("ScreenGui")
@@ -29,7 +41,7 @@ local function createUI()
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0,280,0,190)
+    mainFrame.Size = UDim2.new(0,300,0,210)
     mainFrame.Position = UDim2.new(0,20,0,20)
     mainFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
     mainFrame.BorderSizePixel = 0
@@ -51,13 +63,13 @@ local function createUI()
 
     -- Tabs
     local tabBar = Instance.new("Frame")
-    tabBar.Size = UDim2.new(1, -10, 0, 26)
+    tabBar.Size = UDim2.new(1,-10,0,26)
     tabBar.Position = UDim2.new(0,5,0,32)
     tabBar.BackgroundTransparency = 1
     tabBar.Parent = mainFrame
 
     local mainTab = Instance.new("TextButton")
-    mainTab.Size = UDim2.new(0.5, -5, 1, 0)
+    mainTab.Size = UDim2.new(0.5,-5,1,0)
     mainTab.Position = UDim2.new(0,0,0,0)
     mainTab.BackgroundColor3 = Color3.fromRGB(50,50,50)
     mainTab.TextColor3 = Color3.fromRGB(255,255,255)
@@ -68,7 +80,7 @@ local function createUI()
     Instance.new("UICorner", mainTab).CornerRadius = UDim.new(0,6)
 
     local debugTab = Instance.new("TextButton")
-    debugTab.Size = UDim2.new(0.5, -5, 1, 0)
+    debugTab.Size = UDim2.new(0.5,-5,1,0)
     debugTab.Position = UDim2.new(0.5,5,0,0)
     debugTab.BackgroundColor3 = Color3.fromRGB(35,35,35)
     debugTab.TextColor3 = Color3.fromRGB(200,200,200)
@@ -80,15 +92,15 @@ local function createUI()
 
     -- Main content
     local mainContent = Instance.new("Frame")
-    mainContent.Size = UDim2.new(1,-10,1,-65)
+    mainContent.Size = UDim2.new(1,-10,1,-70)
     mainContent.Position = UDim2.new(0,5,0,60)
     mainContent.BackgroundTransparency = 1
     mainContent.Name = "MainContent"
     mainContent.Parent = mainFrame
 
     local espToggle = Instance.new("TextButton")
-    espToggle.Size = UDim2.new(0,230,0,40)
-    espToggle.Position = UDim2.new(0,20,0,10)
+    espToggle.Size = UDim2.new(0,230,0,36)
+    espToggle.Position = UDim2.new(0,20,0,5)
     espToggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
     espToggle.TextColor3 = Color3.fromRGB(255,255,255)
     espToggle.TextScaled = true
@@ -98,17 +110,29 @@ local function createUI()
     Instance.new("UICorner", espToggle).CornerRadius = UDim.new(0,6)
 
     local info = Instance.new("TextLabel")
-    info.Size = UDim2.new(1,-10,0,20)
-    info.Position = UDim2.new(0,5,0,60)
+    info.Size = UDim2.new(1,-10,0,40)
+    info.Position = UDim2.new(0,5,0,45)
     info.BackgroundTransparency = 1
     info.TextColor3 = Color3.fromRGB(180,180,180)
     info.TextScaled = true
-    info.Text = "L = Toggle ESP | Hold V = Trigger | RightShift = Hide UI"
+    info.TextWrapped = true
+    info.Text = "L = Arm/Disarm | Hold V = Trigger | RightShift = Hide UI"
     info.Parent = mainContent
+
+    local killButton = Instance.new("TextButton")
+    killButton.Size = UDim2.new(0,230,0,30)
+    killButton.Position = UDim2.new(0,20,1,-35)
+    killButton.BackgroundColor3 = Color3.fromRGB(150,40,40)
+    killButton.TextColor3 = Color3.fromRGB(255,255,255)
+    killButton.TextScaled = true
+    killButton.Text = "KILL SCRIPT"
+    killButton.BorderSizePixel = 0
+    killButton.Parent = mainContent
+    Instance.new("UICorner", killButton).CornerRadius = UDim.new(0,6)
 
     -- Debug content
     local debugContent = Instance.new("Frame")
-    debugContent.Size = UDim2.new(1,-10,1,-65)
+    debugContent.Size = UDim2.new(1,-10,1,-70)
     debugContent.Position = UDim2.new(0,5,0,60)
     debugContent.BackgroundTransparency = 1
     debugContent.Name = "DebugContent"
@@ -117,7 +141,7 @@ local function createUI()
 
     local stateLabel = Instance.new("TextLabel")
     stateLabel.Size = UDim2.new(1,-10,0,30)
-    stateLabel.Position = UDim2.new(0,5,0,10)
+    stateLabel.Position = UDim2.new(0,5,0,5)
     stateLabel.BackgroundColor3 = Color3.fromRGB(35,35,35)
     stateLabel.TextColor3 = Color3.fromRGB(255,255,255)
     stateLabel.TextScaled = true
@@ -127,8 +151,8 @@ local function createUI()
     Instance.new("UICorner", stateLabel).CornerRadius = UDim.new(0,6)
 
     local debugInfo = Instance.new("TextLabel")
-    debugInfo.Size = UDim2.new(1,-10,0,60)
-    debugInfo.Position = UDim2.new(0,5,0,50)
+    debugInfo.Size = UDim2.new(1,-10,0,70)
+    debugInfo.Position = UDim2.new(0,5,0,40)
     debugInfo.BackgroundTransparency = 1
     debugInfo.TextColor3 = Color3.fromRGB(200,200,200)
     debugInfo.TextScaled = true
@@ -153,37 +177,17 @@ local function createUI()
         end
     end
 
-    mainTab.MouseButton1Click:Connect(function()
-        setTab(true)
-    end)
+    mainTab.MouseButton1Click:Connect(function() setTab(true) end)
+    debugTab.MouseButton1Click:Connect(function() setTab(false) end)
 
-    debugTab.MouseButton1Click:Connect(function()
-        setTab(false)
-    end)
-
-    return screenGui, mainFrame, espToggle, stateLabel
+    return screenGui, mainFrame, espToggle, stateLabel, killButton
 end
 
-local screenGui, mainFrame, espToggle, stateLabel = createUI()
-
-local uiVisible = true
-
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == Enum.KeyCode.RightShift then
-        uiVisible = not uiVisible
-        mainFrame.Visible = uiVisible
-    end
-end)
+local screenGui, mainFrame, espToggle, stateLabel, killButton = createUI()
 
 ------------------------------------------------------------------
--- ESP SYSTEM
+-- ESP FUNCTIONS
 ------------------------------------------------------------------
-
-local ESP = {}
-ESP.Enabled = false        -- UI toggle (visuals)
-ESP.ToggleActive = false   -- L key toggle (system armed)
-ESP.Pixels = {}
 
 function ESP:CreatePixel(character)
     if not character or self.Pixels[character] then return end
@@ -209,21 +213,21 @@ function ESP:RemovePixel(character)
 end
 
 function ESP:ClearAll()
-    for _, highlight in pairs(self.Pixels) do
-        highlight:Destroy()
+    for _, h in pairs(self.Pixels) do
+        h:Destroy()
     end
     self.Pixels = {}
 end
 
 function ESP:Update()
-    if not self.Enabled or not self.ToggleActive then
+    if not self.Enabled or not self.Armed then
         self:ClearAll()
         return
     end
 
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local char = player.Character
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local char = plr.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
                 if not self.Pixels[char] then
                     self:CreatePixel(char)
@@ -236,84 +240,87 @@ function ESP:Update()
 end
 
 ------------------------------------------------------------------
--- UI BUTTON TOGGLE
+-- KILL SCRIPT
 ------------------------------------------------------------------
 
-espToggle.MouseButton1Click:Connect(function()
+local function KillScript()
+    Running = false
+    ESP:ClearAll()
+    if screenGui then
+        screenGui:Destroy()
+    end
+    for _, conn in ipairs(Connections) do
+        pcall(function() conn:Disconnect() end)
+    end
+end
+
+table.insert(Connections, killButton.MouseButton1Click:Connect(KillScript))
+
+------------------------------------------------------------------
+-- UI TOGGLE + ESP BUTTON
+------------------------------------------------------------------
+
+table.insert(Connections, UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        if mainFrame then
+            mainFrame.Visible = not mainFrame.Visible
+        end
+    end
+end))
+
+table.insert(Connections, espToggle.MouseButton1Click:Connect(function()
     ESP.Enabled = not ESP.Enabled
     espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
-    if not ESP.Enabled then ESP:ClearAll() end
-end)
+    if not ESP.Enabled then
+        ESP:ClearAll()
+    end
+end))
 
 ------------------------------------------------------------------
--- INPUT SYSTEM (L TOGGLE ESP, HOLD V FOR TRIGGERBOT)
+-- INPUT: L (ARM), V (HOLD)
 ------------------------------------------------------------------
 
-local TriggerHeld = false
-
-UserInputService.InputBegan:Connect(function(input, gp)
+table.insert(Connections, UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
 
     if input.KeyCode == Enum.KeyCode.L then
-        ESP.ToggleActive = not ESP.ToggleActive
-        if not ESP.ToggleActive then
-            ESP:ClearAll()
-            TriggerState = "DISARMED"
-        else
+        ESP.Armed = not ESP.Armed
+        if ESP.Armed then
             TriggerState = "ARMED"
+        else
+            TriggerState = "DISARMED"
+            ESP:ClearAll()
         end
     end
 
     if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = true
-        if ESP.ToggleActive then
+        if ESP.Armed then
             TriggerState = "HOLDING"
         end
     end
-end)
+end))
 
-UserInputService.InputEnded:Connect(function(input)
+table.insert(Connections, UserInputService.InputEnded:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = false
-        if ESP.ToggleActive then
+        if ESP.Armed then
             TriggerState = "ARMED"
         else
             TriggerState = "DISARMED"
         end
     end
-end)
+end))
 
 ------------------------------------------------------------------
--- HELPER: FIND CHARACTER MODEL FROM HIT PART
-------------------------------------------------------------------
-
-local function getCharacterFromHit(part)
-    if not part then return nil end
-
-    local ancestor = part
-    while ancestor and not ancestor:IsA("Model") do
-        ancestor = ancestor.Parent
-    end
-    if not ancestor then return nil end
-
-    -- Prefer models with Humanoid
-    if ancestor:FindFirstChildOfClass("Humanoid") then
-        return ancestor
-    end
-
-    -- Fallback: still use the model
-    return ancestor
-end
-
-------------------------------------------------------------------
--- TRIGGERBOT (ONLY FIRES WHEN ACTUALLY AIMING AT A PLAYER)
+-- TRIGGERBOT (STRICT, PLAYER-ONLY, ORIGINAL STYLE)
 ------------------------------------------------------------------
 
 local clicked = false
 
 local function DetectCenterTarget()
-    -- Must be armed (L) AND holding (V)
-    if not ESP.ToggleActive then
+    if not ESP.Armed then
         TriggerState = "DISARMED"
         clicked = false
         return
@@ -327,9 +334,15 @@ local function DetectCenterTarget()
 
     TriggerState = "HOLDING"
 
-    -- Raycast from camera center
-    local center = Camera.ViewportSize / 2
-    local ray = Camera:ViewportPointToRay(center.X, center.Y)
+    if not Camera then
+        Camera = workspace.CurrentCamera
+        if not Camera then return end
+    end
+
+    local centerX = Camera.ViewportSize.X / 2
+    local centerY = Camera.ViewportSize.Y / 2
+
+    local ray = Camera:ViewportPointToRay(centerX, centerY)
 
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Blacklist
@@ -337,56 +350,41 @@ local function DetectCenterTarget()
 
     local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
 
-    if not result then
-        TriggerState = "HOLDING"
-        clicked = false
-        return
+    if result and result.Instance then
+        local part = result.Instance
+        local model = part:FindFirstAncestorOfClass("Model")
+
+        if model then
+            local playerHit = Players:GetPlayerFromCharacter(model)
+            if playerHit and playerHit ~= LocalPlayer then
+                TriggerState = "LOCKED & FIRING"
+
+                -- original behavior: one shot per lock
+                if not clicked then
+                    clicked = true
+                    mouse1press()
+                    task.wait()
+                    mouse1release()
+                end
+
+                return
+            end
+        end
     end
 
-    local hitPart = result.Instance
-    local model = hitPart:FindFirstAncestorOfClass("Model")
-
-    if not model then
-        TriggerState = "HOLDING"
-        clicked = false
-        return
-    end
-
-    -- STRICT: must be a real player character
-    local playerHit = Players:GetPlayerFromCharacter(model)
-    if not playerHit then
-        TriggerState = "HOLDING"
-        clicked = false
-        return
-    end
-
-    -- Must not be yourself
-    if playerHit == LocalPlayer then
-        TriggerState = "HOLDING"
-        clicked = false
-        return
-    end
-
-    -- At this point, we have a REAL player target
-    TriggerState = "LOCKED & FIRING"
-
-    -- Fire EVERY frame while locked
-    mouse1press()
-    task.wait()
-    mouse1release()
-
+    TriggerState = "HOLDING"
     clicked = false
 end
-
 
 ------------------------------------------------------------------
 -- MAIN LOOP
 ------------------------------------------------------------------
 
-RunService.RenderStepped:Connect(function()
+table.insert(Connections, RunService.RenderStepped:Connect(function()
+    if not Running then return end
     ESP:Update()
     DetectCenterTarget()
     if stateLabel then
         stateLabel.Text = "Trigger state: " .. TriggerState
     end
-end)
+end))
