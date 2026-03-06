@@ -1,20 +1,15 @@
---[[
-    Roblox ESP Pixel Overlay System
-    --------------------------------
-    Features:
-    - UI menu with toggle buttons
-    - ESP pixels on HumanoidRootPart
-    - Pixel stays same size at ANY distance
-    - Optional color detection (pixel color matches HRP color)
-    - Larger, more visible pixels with outline
-    - HOLD V to activate ESP
-    - Uses only Roblox APIs (safe & allowed)
+--[[ 
+    Roblox ESP + Triggerbot System
+    Controls:
+        V = Toggle ESP
+        Hold L = Triggerbot
 ]]
 
 --// Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -28,115 +23,86 @@ local function createUI()
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 260, 0, 180)
-    mainFrame.Position = UDim2.new(0, 20, 0, 20)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    mainFrame.Size = UDim2.new(0,260,0,180)
+    mainFrame.Position = UDim2.new(0,20,0,20)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
     mainFrame.BorderSizePixel = 0
     mainFrame.Active = true
     mainFrame.Draggable = true
     mainFrame.Parent = screenGui
 
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    title.Text = "ESP Pixel Overlay"
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.Size = UDim2.new(1,0,0,30)
+    title.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    title.Text = "ESP Highlight System"
+    title.TextColor3 = Color3.fromRGB(255,255,255)
     title.TextScaled = true
     title.BorderSizePixel = 0
     title.Parent = mainFrame
 
     local espToggle = Instance.new("TextButton")
-    espToggle.Size = UDim2.new(0, 220, 0, 40)
-    espToggle.Position = UDim2.new(0, 20, 0, 45)
-    espToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    espToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    espToggle.Size = UDim2.new(0,220,0,40)
+    espToggle.Position = UDim2.new(0,20,0,45)
+    espToggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    espToggle.TextColor3 = Color3.fromRGB(255,255,255)
     espToggle.TextScaled = true
     espToggle.Text = "ESP: OFF"
     espToggle.BorderSizePixel = 0
     espToggle.Parent = mainFrame
 
-    local colorToggle = Instance.new("TextButton")
-    colorToggle.Size = UDim2.new(0, 220, 0, 40)
-    colorToggle.Position = UDim2.new(0, 20, 0, 95)
-    colorToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    colorToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    colorToggle.TextScaled = true
-    colorToggle.Text = "Color Detection: OFF"
-    colorToggle.BorderSizePixel = 0
-    colorToggle.Parent = mainFrame
-
     local info = Instance.new("TextLabel")
-    info.Size = UDim2.new(1, -10, 0, 20)
-    info.Position = UDim2.new(0, 5, 1, -25)
+    info.Size = UDim2.new(1,-10,0,20)
+    info.Position = UDim2.new(0,5,1,-25)
     info.BackgroundTransparency = 1
-    info.TextColor3 = Color3.fromRGB(180, 180, 180)
+    info.TextColor3 = Color3.fromRGB(180,180,180)
     info.TextScaled = true
-    info.Text = "Hold V to activate ESP"
+    info.Text = "Press V to toggle ESP | Hold L to trigger"
     info.Parent = mainFrame
 
-    return espToggle, colorToggle
+    return espToggle
 end
 
-local espToggle, colorToggle = createUI()
+local espToggle = createUI()
 
 --// ESP System
-local ESP = {}
-ESP.Enabled = false
-ESP.ColorDetection = false
-ESP.Pixels = {}
-ESP.PixelSize = 14
-ESP.HoldKeyActive = false
+local ESP = {
+    Enabled = false,
+    ToggleActive = false,
+    Highlights = {}
+}
 
--- Create pixel on HumanoidRootPart
-function ESP:CreatePixel(character)
-    if not character or self.Pixels[character] then return end
+function ESP:CreateHighlight(character)
+    if not character or self.Highlights[character] then return end
 
-    local root = character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESP_Highlight"
+    highlight.FillColor = Color3.fromRGB(255,0,0)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineColor = Color3.fromRGB(255,255,255)
+    highlight.OutlineTransparency = 0
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Adornee = character
+    highlight.Parent = workspace
 
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "ESP_Pixel"
-    billboard.Size = UDim2.new(0, self.PixelSize, 0, self.PixelSize)
-    billboard.AlwaysOnTop = true
-    billboard.Adornee = root
-
-    billboard.MaxDistance = math.huge
-    billboard.LightInfluence = 0
-    billboard.SizeOffset = Vector2.new(0, 0)
-    billboard.StudsOffset = Vector3.new(0, 0, 0)
-
-    billboard.Parent = LocalPlayer.PlayerGui
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 1, 0)
-    frame.BackgroundColor3 = self.ColorDetection and root.Color or Color3.fromRGB(255, 0, 0)
-    frame.BorderSizePixel = 0
-    frame.Parent = billboard
-
-    local outline = Instance.new("UIStroke")
-    outline.Thickness = 2
-    outline.Color = Color3.fromRGB(255, 255, 255)
-    outline.Parent = frame
-
-    self.Pixels[character] = {gui = billboard, frame = frame, root = root}
+    self.Highlights[character] = highlight
 end
 
-function ESP:RemovePixel(character)
-    if self.Pixels[character] then
-        self.Pixels[character].gui:Destroy()
-        self.Pixels[character] = nil
+function ESP:RemoveHighlight(character)
+    if character and self.Highlights[character] then
+        self.Highlights[character]:Destroy()
+        self.Highlights[character] = nil
     end
 end
 
 function ESP:ClearAll()
-    for char, data in pairs(self.Pixels) do
-        data.gui:Destroy()
+    for _, highlight in pairs(self.Highlights) do
+        highlight:Destroy()
     end
-    self.Pixels = {}
+    self.Highlights = {}
 end
 
 function ESP:Update()
-    if not self.Enabled or not self.HoldKeyActive then
+    if not self.Enabled or not self.ToggleActive then
         self:ClearAll()
         return
     end
@@ -145,100 +111,82 @@ function ESP:Update()
         if player ~= LocalPlayer then
             local char = player.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
-                if not self.Pixels[char] then
-                    self:CreatePixel(char)
-                end
-
-                if self.ColorDetection then
-                    local root = self.Pixels[char].root
-                    self.Pixels[char].frame.BackgroundColor3 = root.Color
+                if not self.Highlights[char] then
+                    self:CreateHighlight(char)
                 end
             else
-                self:RemovePixel(char)
+                self:RemoveHighlight(char)
             end
         end
     end
 end
 
---// UI Toggles
+--// UI Toggle
 espToggle.MouseButton1Click:Connect(function()
     ESP.Enabled = not ESP.Enabled
     espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
     if not ESP.Enabled then ESP:ClearAll() end
 end)
 
-colorToggle.MouseButton1Click:Connect(function()
-    ESP.ColorDetection = not ESP.ColorDetection
-    colorToggle.Text = ESP.ColorDetection and "Color Detection: ON" or "Color Detection: OFF"
-end)
+--// Input System
+local TriggerHeld = false
 
---// HOLD V keybind
-UserInputService.InputBegan:Connect(function(input)
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+
     if input.KeyCode == Enum.KeyCode.V then
-        ESP.HoldKeyActive = true
+        ESP.ToggleActive = not ESP.ToggleActive
+        if not ESP.ToggleActive then ESP:ClearAll() end
+    end
+
+    if input.KeyCode == Enum.KeyCode.L then
+        TriggerHeld = true
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.V then
-        ESP.HoldKeyActive = false
-        ESP:ClearAll()
+    if input.KeyCode == Enum.KeyCode.L then
+        TriggerHeld = false
     end
 end)
 
-------------------------------------------------------------------
--- CENTER SCREEN RED PIXEL DETECTOR (NEW)
-------------------------------------------------------------------
-
+--// Triggerbot
 local clicked = false
-local centerMargin = 6
 
-local function DetectCenterRedPixel()
-
-    if not ESP.Enabled or not ESP.HoldKeyActive then
+local function DetectCenterTarget()
+    if not ESP.Enabled or not ESP.ToggleActive or not TriggerHeld then
         clicked = false
         return
     end
 
-    local centerX = Camera.ViewportSize.X / 2
-    local centerY = Camera.ViewportSize.Y / 2
+    local center = Camera.ViewportSize / 2
+    local ray = Camera:ViewportPointToRay(center.X, center.Y)
 
-    for _, data in pairs(ESP.Pixels) do
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {LocalPlayer.Character}
 
-        local pos, visible = Camera:WorldToViewportPoint(data.root.Position)
+    local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
 
-        if visible then
+    if result then
+        local model = result.Instance:FindFirstAncestorOfClass("Model")
+        if model and Players:GetPlayerFromCharacter(model) then
+            if not clicked then
+                clicked = true
 
-            local dx = math.abs(pos.X - centerX)
-            local dy = math.abs(pos.Y - centerY)
-
-            if dx <= centerMargin and dy <= centerMargin then
-
-                local color = data.frame.BackgroundColor3
-
-                if color.R > 0.9 and color.G < 0.2 and color.B < 0.2 then
-
-                    if not clicked then
-                        clicked = true
-                        print("[RED DETECTED] Center pixel hit!")
-                        
-                        -- Place your click/fire code here if needed
-
-                    end
-
-                    return
-                end
+                VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 0)
+                task.wait()
+                VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 0)
             end
+            return
         end
     end
 
     clicked = false
 end
 
---// Main loop
+--// Main Loop
 RunService.RenderStepped:Connect(function()
     ESP:Update()
-    DetectCenterRedPixel()
+    DetectCenterTarget()
 end)
-
-print("[ESP_UI] Loaded successfully.")
