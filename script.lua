@@ -1,4 +1,4 @@
---[[
+--[[ 
     Roblox ESP Pixel Overlay System
     Modified: Uses Highlight instead of Billboard pixels
     Updated: V toggles ESP, MB5 activates trigger
@@ -49,16 +49,6 @@ local function createUI()
     espToggle.BorderSizePixel = 0
     espToggle.Parent = mainFrame
 
-    local colorToggle = Instance.new("TextButton")
-    colorToggle.Size = UDim2.new(0,220,0,40)
-    colorToggle.Position = UDim2.new(0,20,0,95)
-    colorToggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    colorToggle.TextColor3 = Color3.fromRGB(255,255,255)
-    colorToggle.TextScaled = true
-    colorToggle.Text = "Color Detection: OFF"
-    colorToggle.BorderSizePixel = 0
-    colorToggle.Parent = mainFrame
-
     local info = Instance.new("TextLabel")
     info.Size = UDim2.new(1,-10,0,20)
     info.Position = UDim2.new(0,5,1,-25)
@@ -68,15 +58,14 @@ local function createUI()
     info.Text = "Press V to toggle ESP | Hold MB5 to trigger"
     info.Parent = mainFrame
 
-    return espToggle, colorToggle
+    return espToggle
 end
 
-local espToggle, colorToggle = createUI()
+local espToggle = createUI()
 
 --// ESP System
 local ESP = {}
 ESP.Enabled = false
-ESP.ColorDetection = false
 ESP.Pixels = {}
 ESP.ToggleActive = false
 
@@ -96,35 +85,22 @@ function ESP:CreatePixel(character)
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = character
 
-    local root = character:FindFirstChild("HumanoidRootPart")
-
-    self.Pixels[character] = {
-        highlight = highlight,
-        root = root
-    }
+    self.Pixels[character] = highlight
 
 end
 
 function ESP:RemovePixel(character)
 
     if self.Pixels[character] then
-
-        local data = self.Pixels[character]
-
-        if data.highlight then
-            data.highlight:Destroy()
-        end
-
+        self.Pixels[character]:Destroy()
         self.Pixels[character] = nil
     end
 end
 
 function ESP:ClearAll()
 
-    for char,data in pairs(self.Pixels) do
-        if data.highlight then
-            data.highlight:Destroy()
-        end
+    for _,highlight in pairs(self.Pixels) do
+        highlight:Destroy()
     end
 
     self.Pixels = {}
@@ -156,16 +132,11 @@ function ESP:Update()
     end
 end
 
---// UI Toggles
+--// UI Toggle
 espToggle.MouseButton1Click:Connect(function()
     ESP.Enabled = not ESP.Enabled
     espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
     if not ESP.Enabled then ESP:ClearAll() end
-end)
-
-colorToggle.MouseButton1Click:Connect(function()
-    ESP.ColorDetection = not ESP.ColorDetection
-    colorToggle.Text = ESP.ColorDetection and "Color Detection: ON" or "Color Detection: OFF"
 end)
 
 --// INPUT SYSTEM
@@ -197,72 +168,50 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 ------------------------------------------------------------------
--- CENTER SCREEN DETECTOR USING HIGHLIGHT BOUNDS
+-- TRIGGERBOT DETECTOR
 ------------------------------------------------------------------
 
-local clicked = false
+local function DetectCenter()
 
-local function DetectCenterRedPixel()
-
-    if not ESP.Enabled or not ESP.ToggleActive or not MB5Held then
-        clicked = false
-        return
-    end
+    if not MB5Held then return end
 
     local centerX = Camera.ViewportSize.X/2
     local centerY = Camera.ViewportSize.Y/2
 
-    for char,data in pairs(ESP.Pixels) do
+    for char,_ in pairs(ESP.Pixels) do
 
         if char then
 
-            local minX, minY = math.huge, math.huge
-            local maxX, maxY = -math.huge, -math.huge
-            local visiblePart = false
-
             for _,part in ipairs(char:GetChildren()) do
+
                 if part:IsA("BasePart") then
 
                     local pos,visible = Camera:WorldToViewportPoint(part.Position)
 
                     if visible then
-                        visiblePart = true
 
-                        minX = math.min(minX,pos.X)
-                        minY = math.min(minY,pos.Y)
+                        local dx = math.abs(pos.X - centerX)
+                        local dy = math.abs(pos.Y - centerY)
 
-                        maxX = math.max(maxX,pos.X)
-                        maxY = math.max(maxY,pos.Y)
-                    end
-                end
-            end
+                        if dx < 5 and dy < 5 then
 
-            if visiblePart then
+                            VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,true,game,0)
+                            VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,false,game,0)
 
-                if centerX >= minX and centerX <= maxX and
-                   centerY >= minY and centerY <= maxY then
-
-                    if not clicked then
-                        clicked = true
-
-                        VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,true,game,0)
-                        VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,false,game,0)
+                            return
+                        end
 
                     end
-
-                    return
                 end
             end
         end
     end
-
-    clicked = false
 end
 
 --// Main loop
 RunService.RenderStepped:Connect(function()
     ESP:Update()
-    DetectCenterRedPixel()
+    DetectCenter()
 end)
 
 print("[ESP_UI] Loaded successfully.")
