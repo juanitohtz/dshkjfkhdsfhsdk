@@ -1,8 +1,8 @@
 --[[ 
     Roblox ESP + Triggerbot System
     Controls:
-        V = Toggle ESP
-        Hold L = Triggerbot
+        L = Toggle ESP
+        Hold V = Triggerbot
 ]]
 
 --// Services
@@ -56,7 +56,7 @@ local function createUI()
     info.BackgroundTransparency = 1
     info.TextColor3 = Color3.fromRGB(180,180,180)
     info.TextScaled = true
-    info.Text = "Press V to toggle ESP | Hold L to trigger"
+    info.Text = "Press L to toggle ESP | Hold V to trigger"
     info.Parent = mainFrame
 
     return espToggle
@@ -66,8 +66,8 @@ local espToggle = createUI()
 
 --// ESP System
 local ESP = {
-    Enabled = false,
-    ToggleActive = false,
+    Enabled = false,      -- UI toggle
+    ToggleActive = false, -- Keybind toggle (L)
     Highlights = {}
 }
 
@@ -121,36 +121,49 @@ function ESP:Update()
     end
 end
 
---// UI Toggle
+--// UI Toggle (Button)
 espToggle.MouseButton1Click:Connect(function()
     ESP.Enabled = not ESP.Enabled
     espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
-    if not ESP.Enabled then ESP:ClearAll() end
+    if not ESP.Enabled then
+        ESP:ClearAll()
+    end
 end)
 
---// Input System
+------------------------------------------------------------------
+-- INPUT SYSTEM (L TOGGLE ESP, HOLD V FOR TRIGGERBOT)
+------------------------------------------------------------------
+
 local TriggerHeld = false
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
 
-    if input.KeyCode == Enum.KeyCode.V then
+    -- L toggles ESP active state
+    if input.KeyCode == Enum.KeyCode.L then
         ESP.ToggleActive = not ESP.ToggleActive
-        if not ESP.ToggleActive then ESP:ClearAll() end
+        if not ESP.ToggleActive then
+            ESP:ClearAll()
+        end
     end
 
-    if input.KeyCode == Enum.KeyCode.L then
+    -- Hold V for triggerbot
+    if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = true
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.L then
+    -- Release V stops triggerbot
+    if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = false
     end
 end)
 
---// Triggerbot
+------------------------------------------------------------------
+-- CENTER SCREEN TRIGGERBOT (RAYCAST)
+------------------------------------------------------------------
+
 local clicked = false
 
 local function DetectCenterTarget()
@@ -168,12 +181,13 @@ local function DetectCenterTarget()
 
     local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
 
-    if result then
+    if result and result.Instance then
         local model = result.Instance:FindFirstAncestorOfClass("Model")
         if model and Players:GetPlayerFromCharacter(model) then
             if not clicked then
                 clicked = true
 
+                -- Simulated mouse click at screen center
                 VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 0)
                 task.wait()
                 VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 0)
@@ -185,7 +199,7 @@ local function DetectCenterTarget()
     clicked = false
 end
 
---// Main Loop
+--// Main loop
 RunService.RenderStepped:Connect(function()
     ESP:Update()
     DetectCenterTarget()
