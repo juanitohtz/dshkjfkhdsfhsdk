@@ -306,7 +306,7 @@ local function getCharacterFromHit(part)
 end
 
 ------------------------------------------------------------------
--- TRIGGERBOT (FINAL FIXED VERSION)
+-- TRIGGERBOT (ONLY FIRES WHEN ACTUALLY AIMING AT A PLAYER)
 ------------------------------------------------------------------
 
 local clicked = false
@@ -343,9 +343,8 @@ local function DetectCenterTarget()
         return
     end
 
-    -- Find the character model
-    local part = result.Instance
-    local model = part:FindFirstAncestorOfClass("Model")
+    local hitPart = result.Instance
+    local model = hitPart:FindFirstAncestorOfClass("Model")
 
     if not model then
         TriggerState = "HOLDING"
@@ -353,22 +352,22 @@ local function DetectCenterTarget()
         return
     end
 
-    -- Must have a humanoid
-    local humanoid = model:FindFirstChildOfClass("Humanoid")
-    if not humanoid then
+    -- STRICT: must be a real player character
+    local playerHit = Players:GetPlayerFromCharacter(model)
+    if not playerHit then
         TriggerState = "HOLDING"
         clicked = false
         return
     end
 
     -- Must not be yourself
-    if model == LocalPlayer.Character then
+    if playerHit == LocalPlayer then
         TriggerState = "HOLDING"
         clicked = false
         return
     end
 
-    -- At this point, we have a valid target
+    -- At this point, we have a REAL player target
     TriggerState = "LOCKED & FIRING"
 
     -- Fire EVERY frame while locked
