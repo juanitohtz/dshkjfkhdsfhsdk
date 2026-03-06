@@ -132,7 +132,7 @@ end
 
 function ESP:Update()
 
-    if not self.Enabled or not self.ToggleActive then
+    if not ESP.Enabled or not ESP.ToggleActive then
         self:ClearAll()
         return
     end
