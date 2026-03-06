@@ -139,7 +139,11 @@ espToggle.MouseButton1Click:Connect(function()
     if not ESP.Enabled then ESP:ClearAll() end
 end)
 
---// INPUT SYSTEM
+------------------------------------------------------------------
+-- INPUT SYSTEM (L KEY HOLD FOR TRIGGERBOT)
+------------------------------------------------------------------
+
+local TriggerHeld = false
 
 UserInputService.InputBegan:Connect(function(input,gp)
 
@@ -153,27 +157,32 @@ UserInputService.InputBegan:Connect(function(input,gp)
         end
     end
 
-    if input.UserInputType == Enum.UserInputType.MouseButton5 then
-        MB5Held = true
+    if input.KeyCode == Enum.KeyCode.L then
+        TriggerHeld = true
     end
 
 end)
 
 UserInputService.InputEnded:Connect(function(input)
 
-    if input.UserInputType == Enum.UserInputType.MouseButton5 then
-        MB5Held = false
+    if input.KeyCode == Enum.KeyCode.L then
+        TriggerHeld = false
     end
 
 end)
 
 ------------------------------------------------------------------
--- CROSSHAIR RAYCAST TRIGGERBOT (Reliable Version)
+-- CENTER SCREEN TRIGGERBOT (RAYCAST)
 ------------------------------------------------------------------
+
+local clicked = false
 
 local function DetectCenterTarget()
 
-    if not MB5Held then return end
+    if not ESP.Enabled or not ESP.ToggleActive or not TriggerHeld then
+        clicked = false
+        return
+    end
 
     local centerX = Camera.ViewportSize.X / 2
     local centerY = Camera.ViewportSize.Y / 2
@@ -193,17 +202,21 @@ local function DetectCenterTarget()
 
         if model and Players:GetPlayerFromCharacter(model) then
 
-            local character = LocalPlayer.Character
-            if not character then return end
+            if not clicked then
+                clicked = true
 
-            local tool = character:FindFirstChildOfClass("Tool")
+                -- REAL mouse click (works on most executors)
+                mouse1press()
+                task.wait()
+                mouse1release()
 
-            if tool then
-                tool:Activate()
             end
 
+            return
         end
     end
+
+    clicked = false
 end
 --// Main loop
 RunService.RenderStepped:Connect(function()
