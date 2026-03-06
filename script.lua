@@ -183,60 +183,53 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 ------------------------------------------------------------------
--- CENTER SCREEN BODY PART DETECTOR (0 delay trigger)
+-- CENTER SCREEN DETECTOR + MB1 CLICK
 ------------------------------------------------------------------
 
-local centerMargin = 2
+local clicked = false
+local centerMargin = 6
 
 local function DetectCenterRedPixel()
 
     if not ESP.Enabled or not ESP.HoldKeyActive then
+        clicked = false
         return
     end
 
-    local centerX = Camera.ViewportSize.X / 2
-    local centerY = Camera.ViewportSize.Y / 2
+    local centerX = Camera.ViewportSize.X/2
+    local centerY = Camera.ViewportSize.Y/2
 
-    for _, data in pairs(ESP.Pixels) do
+    for _,data in pairs(ESP.Pixels) do
 
-        local character = data.root.Parent
-        if not character then continue end
+        local pos,visible = Camera:WorldToViewportPoint(data.root.Position)
 
-        local partsToCheck = {
-            character:FindFirstChild("Head"),
-            character:FindFirstChild("HumanoidRootPart"),
-            character:FindFirstChild("LeftHand"),
-            character:FindFirstChild("RightHand"),
-            character:FindFirstChild("LeftLowerArm"),
-            character:FindFirstChild("RightLowerArm"),
-            character:FindFirstChild("LeftUpperArm"),
-            character:FindFirstChild("RightUpperArm"),
-            character:FindFirstChild("Left Arm"),  -- R6 support
-            character:FindFirstChild("Right Arm")  -- R6 support
-        }
+        if visible then
 
-        for _, part in ipairs(partsToCheck) do
+            local dx = math.abs(pos.X-centerX)
+            local dy = math.abs(pos.Y-centerY)
 
-            if part then
+            if dx <= centerMargin and dy <= centerMargin then
 
-                local pos, visible = Camera:WorldToViewportPoint(part.Position)
+                if not clicked then
+                    clicked = true
 
-                if visible then
+                    VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,true,game,0)
+                    VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,false,game,0)
 
-                    local dx = math.abs(pos.X - centerX)
-                    local dy = math.abs(pos.Y - centerY)
-
-                    if dx <= centerMargin and dy <= centerMargin then
-
-                        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 0)
-                        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 0)
-
-                        return
-                    end
                 end
+
+                return
             end
         end
     end
+
+    clicked = false
 end
+
+--// Main loop
+RunService.RenderStepped:Connect(function()
+    ESP:Update()
+    DetectCenterRedPixel()
+end)
 
 print("[ESP_UI] Loaded successfully.")
