@@ -168,52 +168,50 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 ------------------------------------------------------------------
--- CENTER SCREEN DETECTOR USING CHARACTER BODY
+-- CROSSHAIR RAYCAST TRIGGERBOT
 ------------------------------------------------------------------
 
 local function DetectCenterTarget()
 
-    if not MB5Held then
-        return
-    end
+    if not MB5Held then return end
 
-    local centerX = Camera.ViewportSize.X/2
-    local centerY = Camera.ViewportSize.Y/2
+    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
-    for _,player in ipairs(Players:GetPlayers()) do
+    local ray = Camera:ViewportPointToRay(center.X, center.Y)
+    local raycastParams = RaycastParams.new()
 
-        if player ~= LocalPlayer then
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
 
-            local char = player.Character
+    local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, raycastParams)
 
-            if char then
+    if result and result.Instance then
 
-                for _,part in ipairs(char:GetChildren()) do
+        local hitPart = result.Instance
+        local model = hitPart:FindFirstAncestorOfClass("Model")
 
-                    if part:IsA("BasePart") then
+        if model and Players:GetPlayerFromCharacter(model) then
 
-                        local pos,visible = Camera:WorldToViewportPoint(part.Position)
+            VirtualInputManager:SendMouseButtonEvent(
+                center.X,
+                center.Y,
+                0,
+                true,
+                game,
+                0
+            )
 
-                        if visible then
+            VirtualInputManager:SendMouseButtonEvent(
+                center.X,
+                center.Y,
+                0,
+                false,
+                game,
+                0
+            )
 
-                            local size = 6 -- hitbox screen tolerance
-
-                            if math.abs(pos.X-centerX) <= size and
-                               math.abs(pos.Y-centerY) <= size then
-
-                                VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,true,game,0)
-                                VirtualInputManager:SendMouseButtonEvent(centerX,centerY,0,false,game,0)
-
-                                return
-                            end
-                        end
-                    end
-                end
-
-            end
         end
     end
-
 end
 --// Main loop
 RunService.RenderStepped:Connect(function()
