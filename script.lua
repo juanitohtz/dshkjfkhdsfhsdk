@@ -2,10 +2,10 @@
     Roblox ESP Pixel Overlay System
     --------------------------------
     Features:
-    - UI menu with toggle button
+    - UI menu with toggle buttons
     - ESP pixels on HumanoidRootPart
     - Pixel stays same size at ANY distance
-    - Pixel color matches HumanoidRootPart color (color detection)
+    - Optional color detection (pixel color matches HRP color)
     - Larger, more visible pixels with outline
     - HOLD V to activate ESP
     - Uses only Roblox APIs (safe & allowed)
@@ -27,7 +27,7 @@ local function createUI()
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 240, 0, 140)
+    mainFrame.Size = UDim2.new(0, 260, 0, 180)
     mainFrame.Position = UDim2.new(0, 20, 0, 20)
     mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     mainFrame.BorderSizePixel = 0
@@ -44,15 +44,25 @@ local function createUI()
     title.BorderSizePixel = 0
     title.Parent = mainFrame
 
-    local toggleButton = Instance.new("TextButton")
-    toggleButton.Size = UDim2.new(0, 200, 0, 45)
-    toggleButton.Position = UDim2.new(0, 20, 0, 45)
-    toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleButton.TextScaled = true
-    toggleButton.Text = "ESP: OFF"
-    toggleButton.BorderSizePixel = 0
-    toggleButton.Parent = mainFrame
+    local espToggle = Instance.new("TextButton")
+    espToggle.Size = UDim2.new(0, 220, 0, 40)
+    espToggle.Position = UDim2.new(0, 20, 0, 45)
+    espToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    espToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    espToggle.TextScaled = true
+    espToggle.Text = "ESP: OFF"
+    espToggle.BorderSizePixel = 0
+    espToggle.Parent = mainFrame
+
+    local colorToggle = Instance.new("TextButton")
+    colorToggle.Size = UDim2.new(0, 220, 0, 40)
+    colorToggle.Position = UDim2.new(0, 20, 0, 95)
+    colorToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    colorToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    colorToggle.TextScaled = true
+    colorToggle.Text = "Color Detection: OFF"
+    colorToggle.BorderSizePixel = 0
+    colorToggle.Parent = mainFrame
 
     local info = Instance.new("TextLabel")
     info.Size = UDim2.new(1, -10, 0, 20)
@@ -63,14 +73,15 @@ local function createUI()
     info.Text = "Hold V to activate ESP"
     info.Parent = mainFrame
 
-    return toggleButton
+    return espToggle, colorToggle
 end
 
-local toggleButton = createUI()
+local espToggle, colorToggle = createUI()
 
 --// ESP System
 local ESP = {}
 ESP.Enabled = false
+ESP.ColorDetection = false
 ESP.Pixels = {}
 ESP.PixelSize = 14
 ESP.HoldKeyActive = false
@@ -88,17 +99,16 @@ function ESP:CreatePixel(character)
     billboard.AlwaysOnTop = true
     billboard.Adornee = root
 
-    -- Pixel stays same size at ANY distance
     billboard.MaxDistance = math.huge
     billboard.LightInfluence = 0
     billboard.SizeOffset = Vector2.new(0, 0)
-    billboard.StudsOffset = Vector3.new(0, 0, 0) -- EXACTLY on HRP
+    billboard.StudsOffset = Vector3.new(0, 0, 0)
 
     billboard.Parent = LocalPlayer.PlayerGui
 
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 1, 0)
-    frame.BackgroundColor3 = root.Color -- COLOR DETECTION
+    frame.BackgroundColor3 = self.ColorDetection and root.Color or Color3.fromRGB(255, 0, 0)
     frame.BorderSizePixel = 0
     frame.Parent = billboard
 
@@ -107,19 +117,19 @@ function ESP:CreatePixel(character)
     outline.Color = Color3.fromRGB(255, 255, 255)
     outline.Parent = frame
 
-    self.Pixels[character] = billboard
+    self.Pixels[character] = {gui = billboard, frame = frame, root = root}
 end
 
 function ESP:RemovePixel(character)
     if self.Pixels[character] then
-        self.Pixels[character]:Destroy()
+        self.Pixels[character].gui:Destroy()
         self.Pixels[character] = nil
     end
 end
 
 function ESP:ClearAll()
-    for char, gui in pairs(self.Pixels) do
-        gui:Destroy()
+    for char, data in pairs(self.Pixels) do
+        data.gui:Destroy()
     end
     self.Pixels = {}
 end
@@ -134,7 +144,15 @@ function ESP:Update()
         if player ~= LocalPlayer then
             local char = player.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
-                self:CreatePixel(char)
+                if not self.Pixels[char] then
+                    self:CreatePixel(char)
+                end
+
+                -- Update color if color detection is enabled
+                if self.ColorDetection then
+                    local root = self.Pixels[char].root
+                    self.Pixels[char].frame.BackgroundColor3 = root.Color
+                end
             else
                 self:RemovePixel(char)
             end
@@ -142,14 +160,16 @@ function ESP:Update()
     end
 end
 
---// UI Toggle
-toggleButton.MouseButton1Click:Connect(function()
+--// UI Toggles
+espToggle.MouseButton1Click:Connect(function()
     ESP.Enabled = not ESP.Enabled
-    toggleButton.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
+    espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
+    if not ESP.Enabled then ESP:ClearAll() end
+end)
 
-    if not ESP.Enabled then
-        ESP:ClearAll()
-    end
+colorToggle.MouseButton1Click:Connect(function()
+    ESP.ColorDetection = not ESP.ColorDetection
+    colorToggle.Text = ESP.ColorDetection and "Color Detection: ON" or "Color Detection: OFF"
 end)
 
 --// HOLD V keybind
