@@ -1,6 +1,6 @@
 --[[ 
     ESP + Triggerbot (L toggle, V hold) + Kill Button + ESP Settings (HTMLColorCodes-style) + Resizable UI
-    L = Arm/Disarm system (Triggerbot + Debug)
+    L = Arm/Disarm system (ESP + Trigger)
     Hold V = Triggerbot
     RightShift = Toggle UI visibility
 ]]
@@ -22,7 +22,7 @@ local Connections = {}
 
 local ESP = {
     Enabled = false,
-    Armed = false, -- no longer used for triggerbot/debug
+    Armed = false, -- no longer used for triggerbot/debug ★
     Pixels = {},
     FillColor = Color3.fromRGB(255,0,0),
     OutlineColor = Color3.fromRGB(255,255,255)
@@ -31,8 +31,7 @@ local ESP = {
 local TriggerHeld = false
 local TriggerState = "DISARMED"
 
--- NEW: independent arming system for triggerbot + debugger
-local SystemArmed = false
+local SystemArmed = false -- ★ NEW: triggerbot + debugger use this
 
 ------------------------------------------------------------------
 -- COLOR HELPERS
@@ -44,33 +43,44 @@ local function HSVToRGB(h, s, v)
     local m = v - c
     local r, g, b = 0, 0, 0
 
-    if h < 60 then r,g,b = c,x,0
-    elseif h < 120 then r,g,b = x,c,0
-    elseif h < 180 then r,g,b = 0,c,x
-    elseif h < 240 then r,g,b = 0,x,c
-    elseif h < 300 then r,g,b = x,0,c
-    else r,g,b = c,0,x end
+    if h < 60 then
+        r, g, b = c, x, 0
+    elseif h < 120 then
+        r, g, b = x, c, 0
+    elseif h < 180 then
+        r, g, b = 0, c, x
+    elseif h < 240 then
+        r, g, b = 0, x, c
+    elseif h < 300 then
+        r, g, b = x, 0, c
+    else
+        r, g, b = c, 0, x
+    end
 
-    return Color3.new(r+m, g+m, b+m)
+    return Color3.new(r + m, g + m, b + m)
 end
 
 local function RGBToHSV(color)
     local r, g, b = color.R, color.G, color.B
-    local max = math.max(r,g,b)
-    local min = math.min(r,g,b)
+    local max = math.max(r, g, b)
+    local min = math.min(r, g, b)
     local d = max - min
 
     local h = 0
-    if d ~= 0 then
-        if max == r then h = 60 * (((g-b)/d)%6)
-        elseif max == g then h = 60 * (((b-r)/d)+2)
-        else h = 60 * (((r-g)/d)+4) end
+    if d == 0 then
+        h = 0
+    elseif max == r then
+        h = 60 * (((g - b) / d) % 6)
+    elseif max == g then
+        h = 60 * (((b - r) / d) + 2)
+    elseif max == b then
+        h = 60 * (((r - g) / d) + 4)
     end
 
-    local s = (max == 0) and 0 or (d/max)
+    local s = (max == 0) and 0 or (d / max)
     local v = max
 
-    return h,s,v
+    return h, s, v
 end
 
 ------------------------------------------------------------------
@@ -246,7 +256,7 @@ local function createUI()
     pickerFrame.Parent = settingsContent
     Instance.new("UICorner", pickerFrame).CornerRadius = UDim.new(0,6)
 
-    -- SV square
+    -- SV square (like htmlcolorcodes)
     svSquare = Instance.new("Frame")
     svSquare.Size = UDim2.new(0,130,0,130)
     svSquare.Position = UDim2.new(0,10,0,10)
@@ -254,10 +264,11 @@ local function createUI()
     svSquare.BorderSizePixel = 0
     svSquare.Parent = pickerFrame
 
-    -- White overlay
+    -- White overlay (left→right)
     local whiteOverlay = Instance.new("Frame")
     whiteOverlay.Size = UDim2.new(1,0,1,0)
     whiteOverlay.BackgroundTransparency = 1
+    whiteOverlay.BorderSizePixel = 0
     whiteOverlay.Parent = svSquare
 
     local whiteGrad = Instance.new("UIGradient")
@@ -269,12 +280,14 @@ local function createUI()
         NumberSequenceKeypoint.new(0, 0),
         NumberSequenceKeypoint.new(1, 1)
     }
+    whiteGrad.Rotation = 0
     whiteGrad.Parent = whiteOverlay
 
-    -- Black overlay
+    -- Black overlay (top→bottom)
     local blackOverlay = Instance.new("Frame")
     blackOverlay.Size = UDim2.new(1,0,1,0)
     blackOverlay.BackgroundTransparency = 1
+    blackOverlay.BorderSizePixel = 0
     blackOverlay.Parent = svSquare
 
     local blackGrad = Instance.new("UIGradient")
@@ -289,7 +302,7 @@ local function createUI()
     blackGrad.Rotation = 90
     blackGrad.Parent = blackOverlay
 
-    -- Hue bar
+    -- Hue bar (rainbow)
     hueBar = Instance.new("Frame")
     hueBar.Size = UDim2.new(0,20,0,130)
     hueBar.Position = UDim2.new(0,150,0,10)
@@ -351,31 +364,4 @@ local function createUI()
 
     mainTab.MouseButton1Click:Connect(function() setTab("main") end)
     debugTab.MouseButton1Click:Connect(function() setTab("debug") end)
-    settingsTab.MouseButton1Click:Connect(function() setTab("settings") end)
-end
-
-createUI()
-
-------------------------------------------------------------------
--- RESIZABLE UI
-------------------------------------------------------------------
-
-do
-    local resizing = false
-    local startPos, startSize
-
-    resizeHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            resizing = true
-            startPos = UserInputService:GetMouseLocation()
-            startSize = mainFrame.Size
-        end
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            resizing = false
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
+    settingsTab.MouseButton1
