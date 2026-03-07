@@ -376,6 +376,22 @@ end
     applyOutline.Position = UDim2.new(0,230,0,50)
     applyOutline.Parent = settingsContent
 
+    applyFill.MouseButton1Click:Connect(function()
+    ESP.FillColor = preview.BackgroundColor3
+    
+    for _,highlight in pairs(ESP.Pixels) do
+        highlight.FillColor = ESP.FillColor
+    end
+end)
+
+applyOutline.MouseButton1Click:Connect(function()
+    ESP.OutlineColor = preview.BackgroundColor3
+    
+    for _,highlight in pairs(ESP.Pixels) do
+        highlight.OutlineColor = ESP.OutlineColor
+    end
+end)
+
     local function setTab(which)
         mainContent.Visible = (which == "main")
         debugContent.Visible = (which == "debug")
