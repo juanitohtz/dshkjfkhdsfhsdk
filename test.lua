@@ -12,6 +12,48 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
+--// CONFIG SYSTEM
+
+local CONFIG_FOLDER = "juanitohtz_esp"
+local CONFIG_FILE = CONFIG_FOLDER.."/settings.json"
+
+if not isfolder(CONFIG_FOLDER) then
+    makefolder(CONFIG_FOLDER)
+end
+
+local HttpService = game:GetService("HttpService")
+
+local Settings = {
+    ESPEnabled = false,
+    TriggerEnabled = false,
+    TriggerKey = "X",
+    OutlineColor = {1,1,1},
+    FillColor = {1,0,0},
+    FillTransparency = 0.5
+}
+
+local function SaveSettings()
+    if writefile then
+        writefile(CONFIG_FILE, HttpService:JSONEncode(Settings))
+    end
+end
+
+local function LoadSettings()
+    if isfile and isfile(CONFIG_FILE) then
+        local data = readfile(CONFIG_FILE)
+        local decoded = HttpService:JSONDecode(data)
+
+        for i,v in pairs(decoded) do
+            Settings[i] = v
+        end
+    end
+end
+
+LoadSettings()
+ESP.Enabled = Settings.ESPEnabled
+ESP.FillColor = Color3.new(unpack(Settings.FillColor))
+ESP.OutlineColor = Color3.new(unpack(Settings.OutlineColor))
+
 ------------------------------------------------------------------
 -- STATE
 ------------------------------------------------------------------
@@ -30,38 +72,6 @@ local ESP = {
 local TriggerHeld = false
 local TriggerState = "DISARMED"
 local clicked = false
-
-------------------------------------------------------------------
--- SETTINGS SYSTEM
-------------------------------------------------------------------
-
-local Settings = {
-    ESPEnabled = false,
-    ESPArmed = false,
-    FillColor = Color3.fromRGB(255,0,0),
-    OutlineColor = Color3.fromRGB(255,255,255),
-    UISizeX = 360,
-    UISizeY = 260
-}
-
-local function SaveSettings()
-    Settings.ESPEnabled = ESP.Enabled
-    Settings.ESPArmed = ESP.Armed
-    Settings.FillColor = ESP.FillColor
-    Settings.OutlineColor = ESP.OutlineColor
-    
-    if mainFrame then
-        Settings.UISizeX = mainFrame.Size.X.Offset
-        Settings.UISizeY = mainFrame.Size.Y.Offset
-    end
-end
-
-local function LoadSettings()
-    ESP.Enabled = Settings.ESPEnabled
-    ESP.Armed = Settings.ESPArmed
-    ESP.FillColor = Settings.FillColor
-    ESP.OutlineColor = Settings.OutlineColor
-end
 
 ------------------------------------------------------------------
 -- COLOR HELPERS
@@ -147,10 +157,20 @@ end
     screenGui.Name = "ESP_UI"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    local watermark = Instance.new("TextLabel")
+    watermark.Size = UDim2.new(0,200,0,20)
+    watermark.Position = UDim2.new(0,10,1,-25)
+    watermark.BackgroundTransparency = 1
+    watermark.Text = "made by juanitohtz"
+    watermark.TextColor3 = Color3.fromRGB(255,255,255)
+    watermark.TextStrokeTransparency = 0.5
+    watermark.TextSize = 14
+    watermark.Font = Enum.Font.GothamBold
+    watermark.Parent = screenGui
 
     mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0,360,0,260)
+    mainFrame.Size = UDim2.new(0,Settings.UISizeX or 360,0,Settings.UISizeY or 260)
     mainFrame.Position = UDim2.new(0,20,0,20)
     mainFrame.BackgroundColor3 = Color3.fromRGB(17,17,17)
     mainFrame.BorderSizePixel = 0
@@ -412,6 +432,12 @@ end
 
     applyFill.MouseButton1Click:Connect(function()
     ESP.FillColor = preview.BackgroundColor3
+
+    Settings.FillColor = {
+    ESP.FillColor.R,
+    ESP.FillColor.G,
+    ESP.FillColor.B
+}
     
     for _,highlight in pairs(ESP.Pixels) do
         highlight.FillColor = ESP.FillColor
@@ -421,6 +447,11 @@ end)
 
 applyOutline.MouseButton1Click:Connect(function()
     ESP.OutlineColor = preview.BackgroundColor3
+    Settings.OutlineColor = {
+    ESP.OutlineColor.R,
+    ESP.OutlineColor.G,
+    ESP.OutlineColor.B
+}        
     
     for _,highlight in pairs(ESP.Pixels) do
         highlight.OutlineColor = ESP.OutlineColor
@@ -501,6 +532,8 @@ do
         local newH = math.max(220, startSize.Y.Offset + dy)
 
         mainFrame.Size = UDim2.new(0,newW,0,newH)
+            Settings.UISizeX = newW
+            Settings.UISizeY = newH
             SaveSettings()
             
     end)
@@ -686,6 +719,7 @@ end))
 
 table.insert(Connections, espToggle.MouseButton1Click:Connect(function()
     ESP.Enabled = not ESP.Enabled
+            Settings.ESPEnabled = ESP.Enabled
     espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
     if not ESP.Enabled then
         ESP:ClearAll()
