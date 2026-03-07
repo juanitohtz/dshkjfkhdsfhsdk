@@ -709,9 +709,9 @@ local params = RaycastParams.new()
     for _,offset in ipairs(offsets) do
     local ray = Camera:ViewportPointToRay(centerX + offset.X, centerY + offset.Y)
 
-    local origin = ray.Origin + ray.Direction * 2
+    local origin = ray.Origin
 
-    result = workspace:Raycast(origin, ray.Direction * 10000, params)
+    result = workspace:Raycast(origin, ray.Direction * 1000, params)
 
     if result then
         break
