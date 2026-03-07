@@ -92,10 +92,6 @@ local espToggle, stateLabel, killButton
 local svSquare, hueBar, preview
 local applyFill, applyOutline
 
--- SELECTORS ADDED
-local svSelector
-local hueSelector
-
 local function createUI()
 
 local function setDragging(state)
@@ -225,6 +221,36 @@ end
     killButton.Parent = mainContent
     Instance.new("UICorner", killButton).CornerRadius = UDim.new(0,6)
 
+    -- Debug content
+    debugContent = Instance.new("Frame")
+    debugContent.Size = UDim2.new(1,-10,1,-90)
+    debugContent.Position = UDim2.new(0,5,0,60)
+    debugContent.BackgroundTransparency = 1
+    debugContent.Name = "DebugContent"
+    debugContent.Visible = false
+    debugContent.Parent = mainFrame
+
+    stateLabel = Instance.new("TextLabel")
+    stateLabel.Size = UDim2.new(1,-10,0,30)
+    stateLabel.Position = UDim2.new(0,5,0,5)
+    stateLabel.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    stateLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    stateLabel.TextScaled = true
+    stateLabel.Text = "Trigger state: " .. TriggerState
+    stateLabel.BorderSizePixel = 0
+    stateLabel.Parent = debugContent
+    Instance.new("UICorner", stateLabel).CornerRadius = UDim.new(0,6)
+
+    local debugInfo = Instance.new("TextLabel")
+    debugInfo.Size = UDim2.new(1,-10,0,70)
+    debugInfo.Position = UDim2.new(0,5,0,40)
+    debugInfo.BackgroundTransparency = 1
+    debugInfo.TextColor3 = Color3.fromRGB(200,200,200)
+    debugInfo.TextScaled = true
+    debugInfo.TextWrapped = true
+    debugInfo.Text = "DISARMED: V not held\nARMED: Ready, V can be held\nHOLDING: V held, scanning\nTARGET: enemy in center"
+    debugInfo.Parent = debugContent
+
     -- Settings content
     settingsContent = Instance.new("Frame")
     settingsContent.Size = UDim2.new(1,-10,1,-90)
@@ -240,6 +266,7 @@ end
     pickerFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
     pickerFrame.BorderSizePixel = 0
     pickerFrame.Parent = settingsContent
+    Instance.new("UICorner", pickerFrame).CornerRadius = UDim.new(0,6)
 
     svSquare = Instance.new("Frame")
     svSquare.Size = UDim2.new(0,130,0,130)
@@ -248,14 +275,41 @@ end
     svSquare.BorderSizePixel = 0
     svSquare.Parent = pickerFrame
 
-    -- SV SELECTOR DOT
-    svSelector = Instance.new("Frame")
-    svSelector.Size = UDim2.new(0,8,0,8)
-    svSelector.AnchorPoint = Vector2.new(0.5,0.5)
-    svSelector.BackgroundColor3 = Color3.new(1,1,1)
-    svSelector.BorderSizePixel = 0
-    svSelector.Parent = svSquare
-    Instance.new("UICorner", svSelector).CornerRadius = UDim.new(1,0)
+    local whiteOverlay = Instance.new("Frame")
+    whiteOverlay.Size = UDim2.new(1,0,1,0)
+    whiteOverlay.BackgroundTransparency = 1
+    whiteOverlay.BorderSizePixel = 0
+    whiteOverlay.Parent = svSquare
+
+    local whiteGrad = Instance.new("UIGradient")
+    whiteGrad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255,255,255))
+    }
+    whiteGrad.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 1)
+    }
+    whiteGrad.Rotation = 0
+    whiteGrad.Parent = whiteOverlay
+
+    local blackOverlay = Instance.new("Frame")
+    blackOverlay.Size = UDim2.new(1,0,1,0)
+    blackOverlay.BackgroundTransparency = 1
+    blackOverlay.BorderSizePixel = 0
+    blackOverlay.Parent = svSquare
+
+    local blackGrad = Instance.new("UIGradient")
+    blackGrad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0,0,0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0,0,0))
+    }
+    blackGrad.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(1, 0)
+    }
+    blackGrad.Rotation = 90
+    blackGrad.Parent = blackOverlay
 
     hueBar = Instance.new("Frame")
     hueBar.Size = UDim2.new(0,20,0,130)
@@ -264,25 +318,122 @@ end
     hueBar.BorderSizePixel = 0
     hueBar.Parent = pickerFrame
 
-    -- HUE SELECTOR LINE
-    hueSelector = Instance.new("Frame")
-    hueSelector.Size = UDim2.new(1,0,0,3)
-    hueSelector.AnchorPoint = Vector2.new(0.5,0.5)
-    hueSelector.BackgroundColor3 = Color3.new(1,1,1)
-    hueSelector.BorderSizePixel = 0
-    hueSelector.Parent = hueBar
+    local hueGrad = Instance.new("UIGradient")
+    hueGrad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255,0,0)),
+        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255,255,0)),
+        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0,255,0)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0,255,255)),
+        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0,0,255)),
+        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255,0,255)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255,0,0))
+    }
+    hueGrad.Transparency = NumberSequence.new(0)
+    hueGrad.Rotation = 90
+    hueGrad.Parent = hueBar
 
     preview = Instance.new("Frame")
     preview.Size = UDim2.new(0,40,0,40)
     preview.Position = UDim2.new(0,150,0,145)
     preview.BackgroundColor3 = ESP.FillColor
+    preview.BorderSizePixel = 0
     preview.Parent = pickerFrame
+    Instance.new("UICorner", preview).CornerRadius = UDim.new(0,4)
+
+    applyFill = Instance.new("TextButton")
+    applyFill.Size = UDim2.new(0,120,0,24)
+    applyFill.Position = UDim2.new(0,230,0,20)
+    applyFill.BackgroundColor3 = Color3.fromRGB(60,120,60)
+    applyFill.TextColor3 = Color3.fromRGB(255,255,255)
+    applyFill.TextScaled = true
+    applyFill.Text = "Apply to Fill"
+    applyFill.BorderSizePixel = 0
+    applyFill.Parent = settingsContent
+    Instance.new("UICorner", applyFill).CornerRadius = UDim.new(0,4)
+
+    applyOutline = applyFill:Clone()
+    applyOutline.Text = "Apply to Outline"
+    applyOutline.Position = UDim2.new(0,230,0,50)
+    applyOutline.Parent = settingsContent
+
+    local function setTab(which)
+        mainContent.Visible = (which == "main")
+        debugContent.Visible = (which == "debug")
+        settingsContent.Visible = (which == "settings")
+
+        mainTab.BackgroundColor3 = (which == "main") and Color3.fromRGB(50,50,50) or Color3.fromRGB(35,35,35)
+        mainTab.TextColor3 = (which == "main") and Color3.fromRGB(255,255,255) or Color3.fromRGB(200,200,200)
+
+        debugTab.BackgroundColor3 = (which == "debug") and Color3.fromRGB(50,50,50) or Color3.fromRGB(35,35,35)
+        debugTab.TextColor3 = (which == "debug") and Color3.fromRGB(255,255,255) or Color3.fromRGB(200,200,200)
+
+        settingsTab.BackgroundColor3 = (which == "settings") and Color3.fromRGB(50,50,50) or Color3.fromRGB(35,35,35)
+        settingsTab.TextColor3 = (which == "settings") and Color3.fromRGB(255,255,255) or Color3.fromRGB(200,200,200)
+    end
+
+    mainTab.MouseButton1Click:Connect(function() setTab("main") end)
+    debugTab.MouseButton1Click:Connect(function() setTab("debug") end)
+    settingsTab.MouseButton1Click:Connect(function() setTab("settings") end)
 end
 
 createUI()
 
+local function setDragging(state)
+    if mainFrame then
+        mainFrame.Draggable = state
+    end
+end
+
 ------------------------------------------------------------------
--- COLOR PICKER LOGIC
+-- RESIZABLE UI (LOCK DRAG ONLY WHILE RESIZING)
+------------------------------------------------------------------
+
+do
+    local resizing = false
+    local startMousePos
+    local startSize
+    local oldDraggable
+
+    resizeHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            resizing = true
+            startMousePos = UserInputService:GetMouseLocation()
+            startSize = mainFrame.Size
+            oldDraggable = mainFrame.Draggable
+            mainFrame.Draggable = false
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if resizing then
+                resizing = false
+                if oldDraggable ~= nil then
+                    mainFrame.Draggable = oldDraggable
+                else
+                    mainFrame.Draggable = true
+                end
+            end
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if not resizing then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+
+        local currentPos = UserInputService:GetMouseLocation()
+        local dx = currentPos.X - startMousePos.X
+        local dy = currentPos.Y - startMousePos.Y
+
+        local newW = math.max(300, startSize.X.Offset + dx)
+        local newH = math.max(220, startSize.Y.Offset + dy)
+
+        mainFrame.Size = UDim2.new(0,newW,0,newH)
+    end)
+end
+
+------------------------------------------------------------------
+-- COLOR PICKER LOGIC (FIXED)
 ------------------------------------------------------------------
 
 local currentHue = 0
@@ -293,15 +444,6 @@ local function updateFromHSV()
     local color = HSVToRGB(currentHue, currentS, currentV)
     preview.BackgroundColor3 = color
     svSquare.BackgroundColor3 = HSVToRGB(currentHue, 1, 1)
-
-    -- UPDATE SELECTORS
-    if svSelector then
-        svSelector.Position = UDim2.new(currentS,0,1-currentV,0)
-    end
-
-    if hueSelector then
-        hueSelector.Position = UDim2.new(0.5,0,1-(currentHue/360),0)
-    end
 end
 
 updateFromHSV()
