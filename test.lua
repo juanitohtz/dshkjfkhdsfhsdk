@@ -129,8 +129,6 @@ local hueSelector
 local function createUI()
 
 LoadSettings()
-
-espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
     
 local function setDragging(state)
     if mainFrame then
@@ -229,11 +227,11 @@ end
 
     espToggle = Instance.new("TextButton")
     espToggle.Size = UDim2.new(0,260,0,36)
+    espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
     espToggle.Position = UDim2.new(0,20,0,5)
     espToggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
     espToggle.TextColor3 = Color3.fromRGB(255,255,255)
     espToggle.TextScaled = true
-    espToggle.Text = "ESP: OFF"
     espToggle.BorderSizePixel = 0
     espToggle.Parent = mainContent
     Instance.new("UICorner", espToggle).CornerRadius = UDim.new(0,6)
@@ -504,7 +502,9 @@ do
 
         mainFrame.Size = UDim2.new(0,newW,0,newH)
             SaveSettings()
+            
     end)
+    
 end
 
 ------------------------------------------------------------------
@@ -686,11 +686,11 @@ end))
 
 table.insert(Connections, espToggle.MouseButton1Click:Connect(function()
     ESP.Enabled = not ESP.Enabled
-            SaveSettings()
     espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
     if not ESP.Enabled then
         ESP:ClearAll()
     end
+            SaveSettings()
 end))
 
 ------------------------------------------------------------------
