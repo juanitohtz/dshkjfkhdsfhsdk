@@ -463,6 +463,7 @@ local function updateFromHSV()
     local color = Color3.fromHSV(currentHue/360, currentS, currentV)
     preview.BackgroundColor3 = color
     svSquare.BackgroundColor3 = Color3.fromHSV(currentHue/360,1,1)
+    svSquare.BackgroundTransparency = 0
 
     if svSelector then
         svSelector.Position = UDim2.new(currentS,0,1-currentV,0)
