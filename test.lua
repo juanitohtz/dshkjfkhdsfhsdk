@@ -399,7 +399,9 @@ do
             local newW = math.max(300, startSize.X.Offset + dx)
             local newH = math.max(220, startSize.Y.Offset + dy)
 
+            -- keep top-left corner fixed while resizing from bottom-right
             mainFrame.Size = UDim2.new(0,newW,0,newH)
+            mainFrame.Position = UDim2.new(0, startPos.X - mainFrame.AbsolutePosition.X, 0, startPos.Y - mainFrame.AbsolutePosition.Y)
         end
     end)
 end
