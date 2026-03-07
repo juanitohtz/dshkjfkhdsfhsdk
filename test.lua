@@ -448,10 +448,12 @@ end
 updateFromHSV()
 
 
--- FIXED SV SQUARE
 svSquare.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         
+        local oldDrag = mainFrame.Draggable
+        mainFrame.Draggable = false
+
         local moveConn, endConn
         
         moveConn = UserInputService.InputChanged:Connect(function(i)
@@ -461,11 +463,8 @@ svSquare.InputBegan:Connect(function(input)
                 local relX = mouse.X - svSquare.AbsolutePosition.X
                 local relY = mouse.Y - svSquare.AbsolutePosition.Y
 
-                local sx = math.clamp(relX / svSquare.AbsoluteSize.X, 0, 1)
-                local sy = math.clamp(relY / svSquare.AbsoluteSize.Y, 0, 1)
-
-                currentS = sx
-                currentV = 1 - sy
+                currentS = math.clamp(relX / svSquare.AbsoluteSize.X, 0, 1)
+                currentV = 1 - math.clamp(relY / svSquare.AbsoluteSize.Y, 0, 1)
 
                 updateFromHSV()
             end
@@ -475,15 +474,19 @@ svSquare.InputBegan:Connect(function(input)
             if i2.UserInputType == Enum.UserInputType.MouseButton1 then
                 if moveConn then moveConn:Disconnect() end
                 if endConn then endConn:Disconnect() end
+                mainFrame.Draggable = oldDrag
             end
         end)
     end
 end)
 
--- FIXED HUE BAR
+
 hueBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         
+        local oldDrag = mainFrame.Draggable
+        mainFrame.Draggable = false
+
         local moveConn, endConn
         
         moveConn = UserInputService.InputChanged:Connect(function(i)
@@ -503,6 +506,7 @@ hueBar.InputBegan:Connect(function(input)
             if i2.UserInputType == Enum.UserInputType.MouseButton1 then
                 if moveConn then moveConn:Disconnect() end
                 if endConn then endConn:Disconnect() end
+                mainFrame.Draggable = oldDrag
             end
         end)
     end
