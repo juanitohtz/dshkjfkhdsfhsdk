@@ -859,7 +859,7 @@ for _,offset in ipairs(offsets) do
 
     if result and result.Instance then
         local model = result.Instance:FindFirstAncestorOfClass("Model")
-        local playerHit = model and Players:GetPlayerFromCharacter(model)
+        local playerHit = model and model:FindFirstChildOfClass("Humanoid") and Players:GetPlayerFromCharacter(model)
 
         if playerHit and playerHit ~= LocalPlayer then
             break
@@ -873,17 +873,20 @@ end
         local part = result.Instance
         local model = result.Instance:FindFirstAncestorOfClass("Model")
 
-        if model then
+        if model and model:FindFirstChildOfClass("Humanoid") then
             local playerHit = Players:GetPlayerFromCharacter(model)
-            if playerHit and playerHit ~= LocalPlayer then
-                TriggerState = "TARGET"
+           if playerHit and playerHit ~= LocalPlayer then
+    TriggerState = "TARGET"
 
-                mouse1press()
-                task.wait(0.01)
-                mouse1release()
+    if not clicked then
+        mouse1press()
+        task.wait(0.01)
+        mouse1release()
+        clicked = true
+    end
 
-                return
-            end
+    return
+end
         end
     end
 
