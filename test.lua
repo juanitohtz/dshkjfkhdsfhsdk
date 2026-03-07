@@ -281,7 +281,8 @@ end
     svSelector.Size = UDim2.new(0,8,0,8)
     svSelector.AnchorPoint = Vector2.new(0.5,0.5)
     svSelector.BackgroundColor3 = Color3.new(1,1,1)
-    svSelector.BorderSizePixel = 0
+    svSelector.BorderSizePixel = 1
+    svSelector.BorderColor3 = Color3.new(0,0,0)
     svSelector.Parent = svSquare
     Instance.new("UICorner", svSelector).CornerRadius = UDim.new(1,0)
 
