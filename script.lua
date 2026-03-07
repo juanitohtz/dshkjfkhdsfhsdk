@@ -281,7 +281,8 @@ end
     svSelector.Size = UDim2.new(0,8,0,8)
     svSelector.AnchorPoint = Vector2.new(0.5,0.5)
     svSelector.BackgroundColor3 = Color3.new(1,1,1)
-    svSelector.BorderSizePixel = 0
+    svSelector.BorderSizePixel = 1
+    svSelector.BorderColor3 = Color3.new(0,0,0)
     svSelector.Parent = svSquare
     Instance.new("UICorner", svSelector).CornerRadius = UDim.new(1,0)
 
@@ -300,7 +301,7 @@ end
         NumberSequenceKeypoint.new(0, 0),
         NumberSequenceKeypoint.new(1, 1)
     }
-    whiteGrad.Rotation = 0
+    whiteGrad.Rotation = 90
     whiteGrad.Parent = whiteOverlay
 
     local blackOverlay = Instance.new("Frame")
@@ -318,7 +319,7 @@ end
         NumberSequenceKeypoint.new(0, 1),
         NumberSequenceKeypoint.new(1, 0)
     }
-    blackGrad.Rotation = 90
+    blackGrad.Rotation = 0
     blackGrad.Parent = blackOverlay
 
     hueBar = Instance.new("Frame")
@@ -329,21 +330,23 @@ end
     hueBar.Parent = pickerFrame
 
     hueSelector = Instance.new("Frame")
-    hueSelector.Size = UDim2.new(1,0,0,3)
     hueSelector.AnchorPoint = Vector2.new(0.5,0.5)
+    hueSelector.Size = UDim2.new(1,0,0,4)
+    hueSelector.Position = UDim2.new(0.5,0,0,0)
     hueSelector.BackgroundColor3 = Color3.new(1,1,1)
-    hueSelector.BorderSizePixel = 0
+    hueSelector.BorderSizePixel = 1
+    hueSelector.BorderColor3 = Color3.new(0,0,0)
     hueSelector.Parent = hueBar
 
     local hueGrad = Instance.new("UIGradient")
     hueGrad.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255,0,0)),
-        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255,255,0)),
-        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0,255,0)),
-        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0,255,255)),
-        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0,0,255)),
-        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255,0,255)),
-        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255,0,0))
+    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255,0,0)),
+    ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255,0,255)),
+    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0,0,255)),
+    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0,255,255)),
+    ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0,255,0)),
+    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255,255,0)),
+    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255,0,0))
     }
     hueGrad.Transparency = NumberSequence.new(0)
     hueGrad.Rotation = 90
@@ -458,9 +461,10 @@ local currentS = 1
 local currentV = 1
 
 local function updateFromHSV()
-    local color = HSVToRGB(currentHue, currentS, currentV)
+    local color = Color3.fromHSV(currentHue/360, currentS, currentV)
     preview.BackgroundColor3 = color
-    svSquare.BackgroundColor3 = HSVToRGB(currentHue, 1, 1)
+    svSquare.BackgroundColor3 = Color3.fromHSV(currentHue/360,1,1)
+    svSquare.BackgroundTransparency = 0
 
     if svSelector then
         svSelector.Position = UDim2.new(currentS,0,1-currentV,0)
@@ -472,6 +476,7 @@ local function updateFromHSV()
 end
 
 updateFromHSV()
+svSelector.Position = UDim2.new(currentS,0,1-currentV,0)
 
 -- FIXED SV SQUARE
 svSquare.InputBegan:Connect(function(input)
@@ -694,22 +699,14 @@ local function DetectCenterTarget()
     Vector2.new(0,4),
     Vector2.new(0,-4)
 }
-
-    local offsets = {
-    Vector2.new(0,0),
-    Vector2.new(2,0),
-    Vector2.new(-2,0),
-    Vector2.new(0,2),
-    Vector2.new(0,-2),
-    Vector2.new(4,0),
-    Vector2.new(-4,0),
-    Vector2.new(0,4),
-    Vector2.new(0,-4)
-}
-
+    
 local result
 
-for _,offset in ipairs(offsets) do
+local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {LocalPlayer.Character}
+
+    for _,offset in ipairs(offsets) do
     local ray = Camera:ViewportPointToRay(centerX + offset.X, centerY + offset.Y)
 
     local origin = ray.Origin + ray.Direction * 2
@@ -721,10 +718,7 @@ for _,offset in ipairs(offsets) do
     end
 end
     
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Blacklist
-    params.FilterDescendantsInstances = {LocalPlayer.Character}
-
+    
     
     if result and result.Instance then
         local part = result.Instance
