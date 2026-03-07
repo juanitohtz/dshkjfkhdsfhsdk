@@ -329,10 +329,12 @@ end
     hueBar.Parent = pickerFrame
 
     hueSelector = Instance.new("Frame")
-    AnchorPoint = Vector2.new(0.5,0.5)
     hueSelector.AnchorPoint = Vector2.new(0.5,0.5)
+    hueSelector.Size = UDim2.new(1,0,0,4)
+    hueSelector.Position = UDim2.new(0.5,0,0,0)
     hueSelector.BackgroundColor3 = Color3.new(1,1,1)
-    hueSelector.BorderSizePixel = 0
+    hueSelector.BorderSizePixel = 1
+    hueSelector.BorderColor3 = Color3.new(0,0,0)
     hueSelector.Parent = hueBar
 
     local hueGrad = Instance.new("UIGradient")
