@@ -114,8 +114,8 @@ local function createUI()
     mainFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
     mainFrame.BorderSizePixel = 0
     mainFrame.Active = true
-    -- IMPORTANT: disable built-in Draggable to avoid conflict with custom resize/drag
-    mainFrame.Draggable = false
+    -- allow normal dragging; we will only lock it while resizing
+    mainFrame.Draggable = true
     mainFrame.Parent = screenGui
     Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0,8)
 
@@ -378,67 +378,52 @@ end
 createUI()
 
 ------------------------------------------------------------------
--- RESIZABLE + DRAGGABLE UI (NO GLITCH)
+-- RESIZABLE UI (LOCK DRAG ONLY WHILE RESIZING)
 ------------------------------------------------------------------
 
 do
     local resizing = false
-    local dragging = false
     local startMousePos
     local startSize
-    local startFramePos
+    local oldDraggable
 
     resizeHandle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             resizing = true
-            dragging = false -- make sure we don't drag while resizing
             startMousePos = UserInputService:GetMouseLocation()
             startSize = mainFrame.Size
-        end
-    end)
-
-    mainFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            -- if we clicked the resize handle, don't start dragging
-            if input.Target == resizeHandle then return end
-            dragging = true
-            resizing = false
-            startMousePos = UserInputService:GetMouseLocation()
-            startFramePos = mainFrame.Position
+            -- temporarily lock dragging while resizing
+            oldDraggable = mainFrame.Draggable
+            mainFrame.Draggable = false
         end
     end)
 
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            resizing = false
-            dragging = false
+            if resizing then
+                resizing = false
+                -- restore previous draggable state
+                if oldDraggable ~= nil then
+                    mainFrame.Draggable = oldDraggable
+                else
+                    mainFrame.Draggable = true
+                end
+            end
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
+        if not resizing then return end
         if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
 
         local currentPos = UserInputService:GetMouseLocation()
+        local dx = currentPos.X - startMousePos.X
+        local dy = currentPos.Y - startMousePos.Y
 
-        if resizing then
-            local dx = currentPos.X - startMousePos.X
-            local dy = currentPos.Y - startMousePos.Y
+        local newW = math.max(300, startSize.X.Offset + dx)
+        local newH = math.max(220, startSize.Y.Offset + dy)
 
-            local newW = math.max(300, startSize.X.Offset + dx)
-            local newH = math.max(220, startSize.Y.Offset + dy)
-
-            mainFrame.Size = UDim2.new(0,newW,0,newH)
-        elseif dragging then
-            local dx = currentPos.X - startMousePos.X
-            local dy = currentPos.Y - startMousePos.Y
-
-            mainFrame.Position = UDim2.new(
-                startFramePos.X.Scale,
-                startFramePos.X.Offset + dx,
-                startFramePos.Y.Scale,
-                startFramePos.Y.Offset + dy
-            )
-        end
+        mainFrame.Size = UDim2.new(0,newW,0,newH)
     end)
 end
 
