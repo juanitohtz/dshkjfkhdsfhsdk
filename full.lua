@@ -1,16 +1,22 @@
---[[ 
-    ESP + Triggerbot (L toggle, V hold) + Kill Button 
-    + ESP Settings (HTMLColorCodes-style) + Resizable UI
+--[[
+ESP + Triggerbot (L toggle, V hold)
++ Kill Button
++ ESP Settings (HTMLColorCodes-style)
++ Resizable UI
 
-    L = Arm/Disarm ESP system
-    Hold V = Triggerbot (independent of ESP arm)
-    RightShift = Toggle UI visibility
+L = Arm/Disarm ESP system
+Hold V = Triggerbot (independent of ESP arm)
+RightShift = Toggle UI visibility
 ]]
 
---// Services
+------------------------------------------------------------------
+-- SERVICES
+------------------------------------------------------------------
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
@@ -25,8 +31,8 @@ local ESP = {
     Enabled = false,
     Armed = false,
     Pixels = {},
-    FillColor = Color3.fromRGB(255,0,0),
-    OutlineColor = Color3.fromRGB(255,255,255)
+    FillColor = Color3.fromRGB(255, 0, 0),
+    OutlineColor = Color3.fromRGB(255, 255, 255)
 }
 
 local TriggerHeld = false
@@ -40,8 +46,8 @@ local clicked = false
 local Settings = {
     ESPEnabled = false,
     ESPArmed = false,
-    FillColor = Color3.fromRGB(255,0,0),
-    OutlineColor = Color3.fromRGB(255,255,255),
+    FillColor = Color3.fromRGB(255, 0, 0),
+    OutlineColor = Color3.fromRGB(255, 255, 255),
     UISizeX = 360,
     UISizeY = 260
 }
@@ -73,6 +79,7 @@ local function HSVToRGB(h, s, v)
     local c = v * s
     local x = c * (1 - math.abs((h / 60) % 2 - 1))
     local m = v - c
+
     local r, g, b = 0, 0, 0
 
     if h < 60 then
@@ -94,9 +101,11 @@ end
 
 local function RGBToHSV(color)
     local r, g, b = color.R, color.G, color.B
+
     local max = math.max(r, g, b)
     local min = math.min(r, g, b)
     local d = max - min
+
     local h = 0
 
     if d == 0 then
@@ -116,18 +125,39 @@ local function RGBToHSV(color)
 end
 
 ------------------------------------------------------------------
--- UI
+-- UI REFERENCES
 ------------------------------------------------------------------
 
 local screenGui, mainFrame, resizeHandle
-local mainTab, debugTab, settingsTab
-local mainContent, debugContent, settingsContent
-local espToggle, stateLabel, killButton
-local svSquare, hueBar, preview
-local applyFill, applyOutline
-local svSelector, hueSelector
+
+local mainTab
+local debugTab
+local settingsTab
+
+local mainContent
+local debugContent
+local settingsContent
+
+local espToggle
+local stateLabel
+local killButton
+
+local svSquare
+local hueBar
+local preview
+
+local applyFill
+local applyOutline
+
+local svSelector
+local hueSelector
+
+------------------------------------------------------------------
+-- UI CREATION
+------------------------------------------------------------------
 
 local function createUI()
+
     LoadSettings()
 
     local function setDragging(state)
@@ -137,278 +167,212 @@ local function createUI()
     end
 
     local pg = LocalPlayer:FindFirstChild("PlayerGui")
+
     if pg then
         local old = pg:FindFirstChild("ESP_UI")
-        if old then old:Destroy() end
+        if old then
+            old:Destroy()
+        end
     end
+
+    --------------------------------------------------------------
+    -- ScreenGui
+    --------------------------------------------------------------
 
     screenGui = Instance.new("ScreenGui")
     screenGui.Name = "ESP_UI"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
+    --------------------------------------------------------------
+    -- Main Frame
+    --------------------------------------------------------------
+
     mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0,360,0,260)
-    mainFrame.Position = UDim2.new(0,20,0,20)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(17,17,17)
+    mainFrame.Size = UDim2.new(0, 360, 0, 260)
+    mainFrame.Position = UDim2.new(0, 20, 0, 20)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(17, 17, 17)
     mainFrame.BorderSizePixel = 0
     mainFrame.Active = true
     mainFrame.Draggable = true
     mainFrame.Parent = screenGui
 
-    Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0,8)
+    Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
+
+    --------------------------------------------------------------
+    -- Resize Handle
+    --------------------------------------------------------------
 
     resizeHandle = Instance.new("Frame")
-    resizeHandle.Size = UDim2.new(0,14,0,14)
-    resizeHandle.AnchorPoint = Vector2.new(1,1)
-    resizeHandle.Position = UDim2.new(1,0,1,0)
-    resizeHandle.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    resizeHandle.Size = UDim2.new(0, 14, 0, 14)
+    resizeHandle.AnchorPoint = Vector2.new(1, 1)
+    resizeHandle.Position = UDim2.new(1, 0, 1, 0)
+    resizeHandle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     resizeHandle.BorderSizePixel = 0
     resizeHandle.Parent = mainFrame
 
-    Instance.new("UICorner", resizeHandle).CornerRadius = UDim.new(0,3)
+    Instance.new("UICorner", resizeHandle).CornerRadius = UDim.new(0, 3)
+
+    --------------------------------------------------------------
+    -- Title
+    --------------------------------------------------------------
 
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1,0,0,30)
-    title.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    title.Size = UDim2.new(1, 0, 0, 30)
+    title.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     title.Text = "ESP + Triggerbot"
-    title.TextColor3 = Color3.fromRGB(255,255,255)
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextScaled = true
     title.BorderSizePixel = 0
     title.Parent = mainFrame
 
-    Instance.new("UICorner", title).CornerRadius = UDim.new(0,8)
+    Instance.new("UICorner", title).CornerRadius = UDim.new(0, 8)
+
+    --------------------------------------------------------------
+    -- Tabs
+    --------------------------------------------------------------
 
     local tabBar = Instance.new("Frame")
-    tabBar.Size = UDim2.new(1,-10,0,26)
-    tabBar.Position = UDim2.new(0,5,0,32)
+    tabBar.Size = UDim2.new(1, -10, 0, 26)
+    tabBar.Position = UDim2.new(0, 5, 0, 32)
     tabBar.BackgroundTransparency = 1
     tabBar.Parent = mainFrame
 
     mainTab = Instance.new("TextButton")
-    mainTab.Size = UDim2.new(1/3,-5,1,0)
-    mainTab.Position = UDim2.new(0,0,0,0)
-    mainTab.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    mainTab.TextColor3 = Color3.fromRGB(255,255,255)
-    mainTab.TextScaled = true
+    mainTab.Size = UDim2.new(1/3, -5, 1, 0)
+    mainTab.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     mainTab.Text = "Main"
+    mainTab.TextScaled = true
+    mainTab.TextColor3 = Color3.fromRGB(255, 255, 255)
     mainTab.BorderSizePixel = 0
     mainTab.Parent = tabBar
+    Instance.new("UICorner", mainTab).CornerRadius = UDim.new(0, 6)
 
-    Instance.new("UICorner", mainTab).CornerRadius = UDim.new(0,6)
-
-    debugTab = Instance.new("TextButton")
-    debugTab.Size = UDim2.new(1/3,-5,1,0)
-    debugTab.Position = UDim2.new(1/3,5,0,0)
-    debugTab.BackgroundColor3 = Color3.fromRGB(35,35,35)
-    debugTab.TextColor3 = Color3.fromRGB(200,200,200)
-    debugTab.TextScaled = true
+    debugTab = mainTab:Clone()
     debugTab.Text = "Debug"
-    debugTab.BorderSizePixel = 0
+    debugTab.Position = UDim2.new(1/3, 5, 0, 0)
+    debugTab.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    debugTab.TextColor3 = Color3.fromRGB(200, 200, 200)
     debugTab.Parent = tabBar
 
-    Instance.new("UICorner", debugTab).CornerRadius = UDim.new(0,6)
-
-    settingsTab = Instance.new("TextButton")
-    settingsTab.Size = UDim2.new(1/3,-5,1,0)
-    settingsTab.Position = UDim2.new(2/3,10,0,0)
-    settingsTab.BackgroundColor3 = Color3.fromRGB(35,35,35)
-    settingsTab.TextColor3 = Color3.fromRGB(200,200,200)
-    settingsTab.TextScaled = true
+    settingsTab = mainTab:Clone()
     settingsTab.Text = "ESP Settings"
-    settingsTab.BorderSizePixel = 0
+    settingsTab.Position = UDim2.new(2/3, 10, 0, 0)
+    settingsTab.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    settingsTab.TextColor3 = Color3.fromRGB(200, 200, 200)
     settingsTab.Parent = tabBar
 
-    Instance.new("UICorner", settingsTab).CornerRadius = UDim.new(0,6)
+end
 
-    -- Main content
-    mainContent = Instance.new("Frame")
-    mainContent.Size = UDim2.new(1,-10,1,-90)
-    mainContent.Position = UDim2.new(0,5,0,60)
-    mainContent.BackgroundTransparency = 1
-    mainContent.Name = "MainContent"
-    mainContent.Parent = mainFrame
+createUI()
 
-    espToggle = Instance.new("TextButton")
-    espToggle.Size = UDim2.new(0,260,0,36)
-    espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
-    espToggle.Position = UDim2.new(0,20,0,5)
-    espToggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    espToggle.TextColor3 = Color3.fromRGB(255,255,255)
-    espToggle.TextScaled = true
-    espToggle.BorderSizePixel = 0
-    espToggle.Parent = mainContent
+------------------------------------------------------------------
+-- ESP FUNCTIONS
+------------------------------------------------------------------
 
-    Instance.new("UICorner", espToggle).CornerRadius = UDim.new(0,6)
+function ESP:CreatePixel(character)
 
-    local info = Instance.new("TextLabel")
-    info.Size = UDim2.new(1,-10,0,40)
-    info.Position = UDim2.new(0,5,0,45)
-    info.BackgroundTransparency = 1
-    info.TextColor3 = Color3.fromRGB(180,180,180)
-    info.TextScaled = true
-    info.TextWrapped = true
-    info.Text = "L = Arm/Disarm | Hold V = Trigger | RightShift = Hide UI"
-    info.Parent = mainContent
+    if not character or self.Pixels[character] then
+        return
+    end
 
-    killButton = Instance.new("TextButton")
-    killButton.Size = UDim2.new(0,260,0,30)
-    killButton.Position = UDim2.new(0,20,1,-35)
-    killButton.BackgroundColor3 = Color3.fromRGB(150,40,40)
-    killButton.TextColor3 = Color3.fromRGB(255,255,255)
-    killButton.TextScaled = true
-    killButton.Text = "KILL SCRIPT"
-    killButton.BorderSizePixel = 0
-    killButton.Parent = mainContent
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESP_Highlight"
+    highlight.FillColor = self.FillColor
+    highlight.FillTransparency = 0.5
+    highlight.OutlineColor = self.OutlineColor
+    highlight.OutlineTransparency = 0
+    highlight.Adornee = character
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = character
 
-    Instance.new("UICorner", killButton).CornerRadius = UDim.new(0,6)
+    self.Pixels[character] = highlight
+end
 
-    -- Debug content
-    debugContent = Instance.new("Frame")
-    debugContent.Size = UDim2.new(1,-10,1,-90)
-    debugContent.Position = UDim2.new(0,5,0,60)
-    debugContent.BackgroundTransparency = 1
-    debugContent.Name = "DebugContent"
-    debugContent.Visible = false
-    debugContent.Parent = mainFrame
+function ESP:RemovePixel(character)
 
-    stateLabel = Instance.new("TextLabel")
-    stateLabel.Size = UDim2.new(1,-10,0,30)
-    stateLabel.Position = UDim2.new(0,5,0,5)
-    stateLabel.BackgroundColor3 = Color3.fromRGB(35,35,35)
-    stateLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    stateLabel.TextScaled = true
-    stateLabel.Text = "Trigger state: " .. TriggerState
-    stateLabel.BorderSizePixel = 0
-    stateLabel.Parent = debugContent
+    if character and self.Pixels[character] then
+        self.Pixels[character]:Destroy()
+        self.Pixels[character] = nil
+    end
+end
 
-    Instance.new("UICorner", stateLabel).CornerRadius = UDim.new(0,6)
+function ESP:ClearAll()
 
-    local debugInfo = Instance.new("TextLabel")
-    debugInfo.Size = UDim2.new(1,-10,0,70)
-    debugInfo.Position = UDim2.new(0,5,0,40)
-    debugInfo.BackgroundTransparency = 1
-    debugInfo.TextColor3 = Color3.fromRGB(200,200,200)
-    debugInfo.TextScaled = true
-    debugInfo.TextWrapped = true
-    debugInfo.Text = "DISARMED: V not held\nARMED: Ready, V can be held\nHOLDING: V held, scanning\nTARGET: enemy in center"
-    debugInfo.Parent = debugContent
+    for _, h in pairs(self.Pixels) do
+        h:Destroy()
+    end
 
-    -- Settings content
-    settingsContent = Instance.new("Frame")
-    settingsContent.Size = UDim2.new(1,-10,1,-90)
-    settingsContent.Position = UDim2.new(0,5,0,60)
-    settingsContent.BackgroundTransparency = 1
-    settingsContent.Name = "SettingsContent"
-    settingsContent.Visible = false
-    settingsContent.Parent = mainFrame
+    self.Pixels = {}
+end
 
-    local pickerFrame = Instance.new("Frame")
-    pickerFrame.Size = UDim2.new(0,210,0,160)
-    pickerFrame.Position = UDim2.new(0,10,0,5)
-    pickerFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-    pickerFrame.BorderSizePixel = 0
-    pickerFrame.Parent = settingsContent
+function ESP:Update()
 
-    Instance.new("UICorner", pickerFrame).CornerRadius = UDim.new(0,6)
+    if not self.Enabled or not self.Armed then
+        if next(self.Pixels) ~= nil then
+            self:ClearAll()
+        end
+        return
+    end
 
-    svSquare = Instance.new("Frame")
-    svSquare.Size = UDim2.new(0,130,0,130)
-    svSquare.Position = UDim2.new(0,10,0,10)
-    svSquare.BackgroundColor3 = Color3.fromRGB(255,0,0)
-    svSquare.BorderSizePixel = 0
-    svSquare.Parent = pickerFrame
+    for _, plr in ipairs(Players:GetPlayers()) do
 
-    svSelector = Instance.new("Frame")
-    svSelector.Size = UDim2.new(0,8,0,8)
-    svSelector.AnchorPoint = Vector2.new(0.5,0.5)
-    svSelector.BackgroundColor3 = Color3.new(1,1,1)
-    svSelector.BorderSizePixel = 1
-    svSelector.BorderColor3 = Color3.new(0,0,0)
-    svSelector.Parent = svSquare
+        if plr ~= LocalPlayer then
 
-    Instance.new("UICorner", svSelector).CornerRadius = UDim.new(1,0)
+            local char = plr.Character
 
-    local whiteOverlay = Instance.new("Frame")
-    whiteOverlay.Size = UDim2.new(1,0,1,0)
-    whiteOverlay.BackgroundTransparency = 1
-    whiteOverlay.BorderSizePixel = 0
-    whiteOverlay.Parent = svSquare
+            if char and char:FindFirstChild("HumanoidRootPart") then
 
-    local whiteGrad = Instance.new("UIGradient")
-    whiteGrad.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(255,255,255))
-    }
-    whiteGrad.Transparency = NumberSequence.new{
-        NumberSequenceKeypoint.new(0, 0),
-        NumberSequenceKeypoint.new(1, 1)
-    }
-    whiteGrad.Rotation = 90
-    whiteGrad.Parent = whiteOverlay
+                if not self.Pixels[char] then
+                    self:CreatePixel(char)
+                end
 
-    local blackOverlay = Instance.new("Frame")
-    blackOverlay.Size = UDim2.new(1,0,1,0)
-    blackOverlay.BackgroundTransparency = 1
-    blackOverlay.BorderSizePixel = 0
-    blackOverlay.Parent = svSquare
+            else
+                self:RemovePixel(char)
+            end
+        end
+    end
+end
 
-    local blackGrad = Instance.new("UIGradient")
-    blackGrad.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(0,0,0)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(0,0,0))
-    }
-    blackGrad.Transparency = NumberSequence.new{
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(1, 0)
-    }
-    blackGrad.Rotation = 0
-    blackGrad.Parent = blackOverlay
+------------------------------------------------------------------
+-- KILL SCRIPT
+------------------------------------------------------------------
 
-    hueBar = Instance.new("Frame")
-    hueBar.Size = UDim2.new(0,20,0,130)
-    hueBar.Position = UDim2.new(0,150,0,10)
-    hueBar.BackgroundColor3 = Color3.fromRGB(255,255,255)
-    hueBar.BorderSizePixel = 0
-    hueBar.Parent = pickerFrame
+local function KillScript()
 
-    hueSelector = Instance.new("Frame")
-    hueSelector.AnchorPoint = Vector2.new(0.5,0.5)
-    hueSelector.Size = UDim2.new(1,0,0,4)
-    hueSelector.Position = UDim2.new(0.5,0,0,0)
-    hueSelector.BackgroundColor3 = Color3.new(1,1,1)
-    hueSelector.BorderSizePixel = 1
-    hueSelector.BorderColor3 = Color3.new(0,0,0)
-    hueSelector.Parent = hueBar
+    Running = false
+    ESP:ClearAll()
 
-    local hueGrad = Instance.new("UIGradient")
-    hueGrad.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255,0,0)),
-        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255,0,255)),
-        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0,0,255)),
-        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0,255,255)),
-        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0,255,0)),
-        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255,255,0)),
-        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255,0,0))
-    }
-    hueGrad.Transparency = NumberSequence.new(0)
-    hueGrad.Rotation = 90
-    hueGrad.Parent = hueBar
+    if screenGui then
+        screenGui:Destroy()
+    end
 
-    preview = Instance.new("Frame")
-    preview.Size = UDim2.new(0,40,0,40)
-    preview.Position = UDim2.new(0,150,0,145)
-    preview.BackgroundColor3 = ESP.FillColor
-    preview.BorderSizePixel = 0
-    preview.Parent = pickerFrame
+    for _, conn in ipairs(Connections) do
+        pcall(function()
+            conn:Disconnect()
+        end)
+    end
+end
 
-    Instance.new("UICorner", preview).CornerRadius = UDim.new(0,4)
+table.insert(Connections, killButton.MouseButton1Click:Connect(KillScript))
 
-    applyFill = Instance.new("TextButton")
-    applyFill.Size = UDim2.new(0,120,0,24)
-    applyFill.Position = UDim2.new(0,230,0,20)
-    applyFill.BackgroundColor3 = Color3.fromRGB(60,120,60)
-    applyFill.TextColor3 = Color3.fromRGB(255,255,255)
-    applyFill.TextScaled = true
-    applyFill.Text =
+------------------------------------------------------------------
+-- MAIN LOOP
+------------------------------------------------------------------
+
+table.insert(Connections,
+    RunService.RenderStepped:Connect(function()
+
+        if not Running then
+            return
+        end
+
+        ESP:Update()
+
+        if stateLabel then
+            stateLabel.Text = "Trigger state: " .. TriggerState
+        end
+
+    end)
+)
