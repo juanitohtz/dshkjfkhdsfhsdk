@@ -771,22 +771,27 @@ local function DetectCenterTarget()
 local result
 
 local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Blacklist
-    params.FilterDescendantsInstances = {LocalPlayer.Character}
+params.FilterType = Enum.RaycastFilterType.Blacklist
+params.FilterDescendantsInstances = {LocalPlayer.Character}
 
-    for _,offset in ipairs(offsets) do
+for _,offset in ipairs(offsets) do
     local ray = Camera:ViewportPointToRay(centerX + offset.X, centerY + offset.Y)
 
     local origin = ray.Origin
 
-    result = workspace:Raycast(origin, ray.Direction * 1000, params)
+    result = workspace:Raycast(origin, ray.Direction * 2000, params)
 
-    if result then
-        break
+    if result and result.Instance then
+        local model = result.Instance:FindFirstAncestorOfClass("Model")
+        local playerHit = model and Players:GetPlayerFromCharacter(model)
+
+        if playerHit and playerHit ~= LocalPlayer then
+            break
+        else
+            result = nil
+        end
     end
-end
-    
-    
+end 
     
     if result and result.Instance then
         local part = result.Instance
