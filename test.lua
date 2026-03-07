@@ -91,6 +91,8 @@ local mainContent, debugContent, settingsContent
 local espToggle, stateLabel, killButton
 local svSquare, hueBar, preview
 local applyFill, applyOutline
+local svSelector
+local hueSelector
 
 local function createUI()
 
@@ -275,6 +277,14 @@ end
     svSquare.BorderSizePixel = 0
     svSquare.Parent = pickerFrame
 
+    svSelector = Instance.new("Frame")
+    svSelector.Size = UDim2.new(0,8,0,8)
+    svSelector.AnchorPoint = Vector2.new(0.5,0.5)
+    svSelector.BackgroundColor3 = Color3.new(1,1,1)
+    svSelector.BorderSizePixel = 0
+    svSelector.Parent = svSquare
+    Instance.new("UICorner", svSelector).CornerRadius = UDim.new(1,0)
+
     local whiteOverlay = Instance.new("Frame")
     whiteOverlay.Size = UDim2.new(1,0,1,0)
     whiteOverlay.BackgroundTransparency = 1
@@ -317,6 +327,13 @@ end
     hueBar.BackgroundColor3 = Color3.fromRGB(255,255,255)
     hueBar.BorderSizePixel = 0
     hueBar.Parent = pickerFrame
+
+    hueSelector = Instance.new("Frame")
+    hueSelector.Size = UDim2.new(1,0,0,3)
+    hueSelector.AnchorPoint = Vector2.new(0.5,0.5)
+    hueSelector.BackgroundColor3 = Color3.new(1,1,1)
+    hueSelector.BorderSizePixel = 0
+    hueSelector.Parent = hueBar
 
     local hueGrad = Instance.new("UIGradient")
     hueGrad.Color = ColorSequence.new{
@@ -444,6 +461,14 @@ local function updateFromHSV()
     local color = HSVToRGB(currentHue, currentS, currentV)
     preview.BackgroundColor3 = color
     svSquare.BackgroundColor3 = HSVToRGB(currentHue, 1, 1)
+
+    if svSelector then
+        svSelector.Position = UDim2.new(currentS,0,1-currentV,0)
+    end
+
+    if hueSelector then
+        hueSelector.Position = UDim2.new(0.5,0,1-(currentHue/360),0)
+    end
 end
 
 updateFromHSV()
