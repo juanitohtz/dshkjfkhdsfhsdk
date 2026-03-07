@@ -308,7 +308,7 @@ local function createUI()
     hueBar = Instance.new("Frame")
     hueBar.Size = UDim2.new(0,20,0,130)
     hueBar.Position = UDim2.new(0,150,0,10)
-    hueBar.BackgroundColor3 = Color3.fromRGB(255,0,0)
+    hueBar.BackgroundColor3 = Color3.fromRGB(255,255,255)
     hueBar.BorderSizePixel = 0
     hueBar.Parent = pickerFrame
 
@@ -322,6 +322,7 @@ local function createUI()
         ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255,0,255)),
         ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255,0,0))
     }
+    hueGrad.Transparency = NumberSequence.new(0)
     hueGrad.Rotation = 90
     hueGrad.Parent = hueBar
 
@@ -427,33 +428,18 @@ local currentHue = 0
 local currentS = 1
 local currentV = 1
 
-local currentHue = 0
-local currentS = 1
-local currentV = 1
-
 local function updateFromHSV()
     local color = HSVToRGB(currentHue, currentS, currentV)
-
-    -- UI preview
     preview.BackgroundColor3 = color
     svSquare.BackgroundColor3 = HSVToRGB(currentHue, 1, 1)
-
-    -- LIVE ESP PREVIEW (fill + outline)
-    for _, highlight in pairs(ESP.Pixels) do
-        highlight.FillColor = color
-        highlight.OutlineColor = color
-    end
 end
 
 updateFromHSV()
 
-
+-- FIXED SV SQUARE
 svSquare.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         
-        local oldDrag = mainFrame.Draggable
-        mainFrame.Draggable = false
-
         local moveConn, endConn
         
         moveConn = UserInputService.InputChanged:Connect(function(i)
@@ -463,8 +449,11 @@ svSquare.InputBegan:Connect(function(input)
                 local relX = mouse.X - svSquare.AbsolutePosition.X
                 local relY = mouse.Y - svSquare.AbsolutePosition.Y
 
-                currentS = math.clamp(relX / svSquare.AbsoluteSize.X, 0, 1)
-                currentV = 1 - math.clamp(relY / svSquare.AbsoluteSize.Y, 0, 1)
+                local sx = math.clamp(relX / svSquare.AbsoluteSize.X, 0, 1)
+                local sy = math.clamp(relY / svSquare.AbsoluteSize.Y, 0, 1)
+
+                currentS = sx
+                currentV = 1 - sy
 
                 updateFromHSV()
             end
@@ -474,19 +463,15 @@ svSquare.InputBegan:Connect(function(input)
             if i2.UserInputType == Enum.UserInputType.MouseButton1 then
                 if moveConn then moveConn:Disconnect() end
                 if endConn then endConn:Disconnect() end
-                mainFrame.Draggable = oldDrag
             end
         end)
     end
 end)
 
-
+-- FIXED HUE BAR
 hueBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         
-        local oldDrag = mainFrame.Draggable
-        mainFrame.Draggable = false
-
         local moveConn, endConn
         
         moveConn = UserInputService.InputChanged:Connect(function(i)
@@ -506,7 +491,6 @@ hueBar.InputBegan:Connect(function(input)
             if i2.UserInputType == Enum.UserInputType.MouseButton1 then
                 if moveConn then moveConn:Disconnect() end
                 if endConn then endConn:Disconnect() end
-                mainFrame.Draggable = oldDrag
             end
         end)
     end
