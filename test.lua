@@ -689,15 +689,15 @@ local function DetectCenterTarget()
     local centerY = viewportSize.Y / 2
 
     local offsets = {
-    Vector2.new(0,0),
-    Vector2.new(2,0),
-    Vector2.new(-2,0),
-    Vector2.new(0,2),
-    Vector2.new(0,-2),
-    Vector2.new(4,0),
-    Vector2.new(-4,0),
-    Vector2.new(0,4),
-    Vector2.new(0,-4)
+Vector2.new(0,0),
+Vector2.new(1,0),
+Vector2.new(-1,0),
+Vector2.new(0,1),
+Vector2.new(0,-1),
+Vector2.new(2,0),
+Vector2.new(-2,0),
+Vector2.new(0,2),
+Vector2.new(0,-2)
 }
     
 local result
