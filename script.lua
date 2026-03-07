@@ -32,6 +32,38 @@ local TriggerState = "DISARMED"
 local clicked = false
 
 ------------------------------------------------------------------
+-- SETTINGS SYSTEM
+------------------------------------------------------------------
+
+local Settings = {
+    ESPEnabled = false,
+    ESPArmed = false,
+    FillColor = Color3.fromRGB(255,0,0),
+    OutlineColor = Color3.fromRGB(255,255,255),
+    UISizeX = 360,
+    UISizeY = 260
+}
+
+local function SaveSettings()
+    Settings.ESPEnabled = ESP.Enabled
+    Settings.ESPArmed = ESP.Armed
+    Settings.FillColor = ESP.FillColor
+    Settings.OutlineColor = ESP.OutlineColor
+    
+    if mainFrame then
+        Settings.UISizeX = mainFrame.Size.X.Offset
+        Settings.UISizeY = mainFrame.Size.Y.Offset
+    end
+end
+
+local function LoadSettings()
+    ESP.Enabled = Settings.ESPEnabled
+    ESP.Armed = Settings.ESPArmed
+    ESP.FillColor = Settings.FillColor
+    ESP.OutlineColor = Settings.OutlineColor
+end
+
+------------------------------------------------------------------
 -- COLOR HELPERS
 ------------------------------------------------------------------
 
@@ -96,6 +128,8 @@ local hueSelector
 
 local function createUI()
 
+LoadSettings()
+    
 local function setDragging(state)
     if mainFrame then
         mainFrame.Draggable = state
@@ -118,7 +152,7 @@ end
     mainFrame.Name = "MainFrame"
     mainFrame.Size = UDim2.new(0,360,0,260)
     mainFrame.Position = UDim2.new(0,20,0,20)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(17,17,17)
     mainFrame.BorderSizePixel = 0
     mainFrame.Active = true
     mainFrame.Draggable = true
@@ -136,7 +170,7 @@ end
 
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1,0,0,30)
-    title.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    title.BackgroundColor3 = Color3.fromRGB(25,25,25)
     title.Text = "ESP + Triggerbot"
     title.TextColor3 = Color3.fromRGB(255,255,255)
     title.TextScaled = true
@@ -193,11 +227,11 @@ end
 
     espToggle = Instance.new("TextButton")
     espToggle.Size = UDim2.new(0,260,0,36)
+    espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
     espToggle.Position = UDim2.new(0,20,0,5)
     espToggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
     espToggle.TextColor3 = Color3.fromRGB(255,255,255)
     espToggle.TextScaled = true
-    espToggle.Text = "ESP: OFF"
     espToggle.BorderSizePixel = 0
     espToggle.Parent = mainContent
     Instance.new("UICorner", espToggle).CornerRadius = UDim.new(0,6)
@@ -376,6 +410,24 @@ end
     applyOutline.Position = UDim2.new(0,230,0,50)
     applyOutline.Parent = settingsContent
 
+    applyFill.MouseButton1Click:Connect(function()
+    ESP.FillColor = preview.BackgroundColor3
+    
+    for _,highlight in pairs(ESP.Pixels) do
+        highlight.FillColor = ESP.FillColor
+    end
+            SaveSettings()
+end)
+
+applyOutline.MouseButton1Click:Connect(function()
+    ESP.OutlineColor = preview.BackgroundColor3
+    
+    for _,highlight in pairs(ESP.Pixels) do
+        highlight.OutlineColor = ESP.OutlineColor
+    end
+             SaveSettings()
+end)
+
     local function setTab(which)
         mainContent.Visible = (which == "main")
         debugContent.Visible = (which == "debug")
@@ -449,7 +501,10 @@ do
         local newH = math.max(220, startSize.Y.Offset + dy)
 
         mainFrame.Size = UDim2.new(0,newW,0,newH)
+            SaveSettings()
+            
     end)
+    
 end
 
 ------------------------------------------------------------------
@@ -635,6 +690,7 @@ table.insert(Connections, espToggle.MouseButton1Click:Connect(function()
     if not ESP.Enabled then
         ESP:ClearAll()
     end
+            SaveSettings()
 end))
 
 ------------------------------------------------------------------
@@ -689,15 +745,15 @@ local function DetectCenterTarget()
     local centerY = viewportSize.Y / 2
 
     local offsets = {
-    Vector2.new(0,0),
-    Vector2.new(2,0),
-    Vector2.new(-2,0),
-    Vector2.new(0,2),
-    Vector2.new(0,-2),
-    Vector2.new(4,0),
-    Vector2.new(-4,0),
-    Vector2.new(0,4),
-    Vector2.new(0,-4)
+Vector2.new(0,0),
+Vector2.new(1,0),
+Vector2.new(-1,0),
+Vector2.new(0,1),
+Vector2.new(0,-1),
+Vector2.new(2,0),
+Vector2.new(-2,0),
+Vector2.new(0,2),
+Vector2.new(0,-2)
 }
     
 local result
@@ -709,9 +765,9 @@ local params = RaycastParams.new()
     for _,offset in ipairs(offsets) do
     local ray = Camera:ViewportPointToRay(centerX + offset.X, centerY + offset.Y)
 
-    local origin = ray.Origin + ray.Direction * 2
+    local origin = ray.Origin
 
-    result = workspace:Raycast(origin, ray.Direction * 10000, params)
+    result = workspace:Raycast(origin, ray.Direction * 1000, params)
 
     if result then
         break
