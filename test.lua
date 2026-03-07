@@ -689,8 +689,9 @@ local function DetectCenterTarget()
     params.FilterType = Enum.RaycastFilterType.Blacklist
     params.FilterDescendantsInstances = {LocalPlayer.Character}
 
-    local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
-
+    local origin = ray.Origin + ray.Direction * 1
+    local result = workspace:Raycast(origin, ray.Direction * 5000, params)
+    
     if result and result.Instance then
         local part = result.Instance
         local model = part:FindFirstAncestorOfClass("Model")
