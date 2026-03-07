@@ -427,13 +427,26 @@ local currentHue = 0
 local currentS = 1
 local currentV = 1
 
+local currentHue = 0
+local currentS = 1
+local currentV = 1
+
 local function updateFromHSV()
     local color = HSVToRGB(currentHue, currentS, currentV)
+
+    -- UI preview
     preview.BackgroundColor3 = color
     svSquare.BackgroundColor3 = HSVToRGB(currentHue, 1, 1)
+
+    -- LIVE ESP PREVIEW (fill + outline)
+    for _, highlight in pairs(ESP.Pixels) do
+        highlight.FillColor = color
+        highlight.OutlineColor = color
+    end
 end
 
 updateFromHSV()
+
 
 -- FIXED SV SQUARE
 svSquare.InputBegan:Connect(function(input)
