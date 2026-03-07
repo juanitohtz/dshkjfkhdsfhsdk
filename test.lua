@@ -337,13 +337,13 @@ end
 
     local hueGrad = Instance.new("UIGradient")
     hueGrad.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255,0,0)),
-        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255,255,0)),
-        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0,255,0)),
-        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0,255,255)),
-        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0,0,255)),
-        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255,0,255)),
-        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255,0,0))
+    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255,0,0)),
+    ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255,0,255)),
+    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0,0,255)),
+    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0,255,255)),
+    ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0,255,0)),
+    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255,255,0)),
+    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255,0,0))
     }
     hueGrad.Transparency = NumberSequence.new(0)
     hueGrad.Rotation = 90
@@ -458,20 +458,21 @@ local currentS = 1
 local currentV = 1
 
 local function updateFromHSV()
-    local color = HSVToRGB(currentHue, currentS, currentV)
+    local color = Color3.fromHSV(currentHue/360, currentS, currentV)
     preview.BackgroundColor3 = color
-    svSquare.BackgroundColor3 = HSVToRGB(currentHue, 1, 1)
+    svSquare.BackgroundColor3 = Color3.fromHSV(currentHue/360,1,1)
 
     if svSelector then
         svSelector.Position = UDim2.new(currentS,0,1-currentV,0)
     end
 
     if hueSelector then
-        hueSelector.Position = UDim2.new(0.5,0,1-(currentHue/360),0)
+        hueSelector.Position = UDim2.new(0.5,0,currentHue/360,0)
     end
 end
 
 updateFromHSV()
+svSelector.Position = UDim2.new(currentS,0,1-currentV,0)
 
 -- FIXED SV SQUARE
 svSquare.InputBegan:Connect(function(input)
@@ -694,22 +695,14 @@ local function DetectCenterTarget()
     Vector2.new(0,4),
     Vector2.new(0,-4)
 }
-
-    local offsets = {
-    Vector2.new(0,0),
-    Vector2.new(2,0),
-    Vector2.new(-2,0),
-    Vector2.new(0,2),
-    Vector2.new(0,-2),
-    Vector2.new(4,0),
-    Vector2.new(-4,0),
-    Vector2.new(0,4),
-    Vector2.new(0,-4)
-}
-
+    
 local result
 
-for _,offset in ipairs(offsets) do
+local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {LocalPlayer.Character}
+
+    for _,offset in ipairs(offsets) do
     local ray = Camera:ViewportPointToRay(centerX + offset.X, centerY + offset.Y)
 
     local origin = ray.Origin + ray.Direction * 2
@@ -721,10 +714,7 @@ for _,offset in ipairs(offsets) do
     end
 end
     
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Blacklist
-    params.FilterDescendantsInstances = {LocalPlayer.Character}
-
+    
     
     if result and result.Instance then
         local part = result.Instance
