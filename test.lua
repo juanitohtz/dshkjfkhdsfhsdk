@@ -329,7 +329,7 @@ end
     hueBar.Parent = pickerFrame
 
     hueSelector = Instance.new("Frame")
-    hueSelector.Size = UDim2.new(1,0,0,3)
+    AnchorPoint = Vector2.new(0.5,0.5)
     hueSelector.AnchorPoint = Vector2.new(0.5,0.5)
     hueSelector.BackgroundColor3 = Color3.new(1,1,1)
     hueSelector.BorderSizePixel = 0
@@ -467,7 +467,7 @@ local function updateFromHSV()
     end
 
     if hueSelector then
-        hueSelector.Position = UDim2.new(0.5,0,currentHue/360,0)
+        hueSelector.Position = UDim2.new(0.5,0,1-(currentHue/360),0)
     end
 end
 
