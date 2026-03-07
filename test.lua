@@ -300,7 +300,7 @@ end
         NumberSequenceKeypoint.new(0, 0),
         NumberSequenceKeypoint.new(1, 1)
     }
-    whiteGrad.Rotation = 0
+    whiteGrad.Rotation = 90
     whiteGrad.Parent = whiteOverlay
 
     local blackOverlay = Instance.new("Frame")
@@ -318,7 +318,7 @@ end
         NumberSequenceKeypoint.new(0, 1),
         NumberSequenceKeypoint.new(1, 0)
     }
-    blackGrad.Rotation = 90
+    blackGrad.Rotation = 0
     blackGrad.Parent = blackOverlay
 
     hueBar = Instance.new("Frame")
