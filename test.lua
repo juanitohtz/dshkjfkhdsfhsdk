@@ -420,7 +420,7 @@ do
 end
 
 ------------------------------------------------------------------
--- COLOR PICKER LOGIC (HTMLColorCodes-STYLE)
+-- COLOR PICKER LOGIC (FIXED)
 ------------------------------------------------------------------
 
 local currentHue = 0
@@ -435,19 +435,29 @@ end
 
 updateFromHSV()
 
+-- FIXED SV SQUARE
 svSquare.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        
         local moveConn, endConn
+        
         moveConn = UserInputService.InputChanged:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseMovement then
-                local rel = i.Position - svSquare.AbsolutePosition
-                local sx = math.clamp(rel.X / svSquare.AbsoluteSize.X, 0, 1)
-                local sy = math.clamp(rel.Y / svSquare.AbsoluteSize.Y, 0, 1)
+                
+                local mouse = UserInputService:GetMouseLocation()
+                local relX = mouse.X - svSquare.AbsolutePosition.X
+                local relY = mouse.Y - svSquare.AbsolutePosition.Y
+
+                local sx = math.clamp(relX / svSquare.AbsoluteSize.X, 0, 1)
+                local sy = math.clamp(relY / svSquare.AbsoluteSize.Y, 0, 1)
+
                 currentS = sx
                 currentV = 1 - sy
+
                 updateFromHSV()
             end
         end)
+
         endConn = UserInputService.InputEnded:Connect(function(i2)
             if i2.UserInputType == Enum.UserInputType.MouseButton1 then
                 if moveConn then moveConn:Disconnect() end
@@ -457,17 +467,25 @@ svSquare.InputBegan:Connect(function(input)
     end
 end)
 
+-- FIXED HUE BAR
 hueBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        
         local moveConn, endConn
+        
         moveConn = UserInputService.InputChanged:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseMovement then
-                local rel = i.Position - hueBar.AbsolutePosition
-                local t = math.clamp(rel.Y / hueBar.AbsoluteSize.Y, 0, 1)
-                currentHue = t * 360
+                
+                local mouse = UserInputService:GetMouseLocation()
+                local relY = mouse.Y - hueBar.AbsolutePosition.Y
+
+                local t = math.clamp(relY / hueBar.AbsoluteSize.Y, 0, 1)
+                currentHue = math.clamp(t * 360, 0, 360)
+
                 updateFromHSV()
             end
         end)
+
         endConn = UserInputService.InputEnded:Connect(function(i2)
             if i2.UserInputType == Enum.UserInputType.MouseButton1 then
                 if moveConn then moveConn:Disconnect() end
@@ -477,22 +495,6 @@ hueBar.InputBegan:Connect(function(input)
     end
 end)
 
-local function UpdateESPColors()
-    for _, highlight in pairs(ESP.Pixels) do
-        highlight.FillColor = ESP.FillColor
-        highlight.OutlineColor = ESP.OutlineColor
-    end
-end
-
-applyFill.MouseButton1Click:Connect(function()
-    ESP.FillColor = preview.BackgroundColor3
-    UpdateESPColors()
-end)
-
-applyOutline.MouseButton1Click:Connect(function()
-    ESP.OutlineColor = preview.BackgroundColor3
-    UpdateESPColors()
-end)
 
 ------------------------------------------------------------------
 -- ESP FUNCTIONS
