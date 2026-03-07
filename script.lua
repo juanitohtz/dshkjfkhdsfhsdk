@@ -1,7 +1,7 @@
 --[[ 
     ESP + Triggerbot (L toggle, V hold) + Kill Button + ESP Settings (HTMLColorCodes-style) + Resizable UI
-    L = Arm/Disarm system (ESP + Trigger)
-    Hold V = Triggerbot
+    L = Arm/Disarm ESP system
+    Hold V = Triggerbot (independent of ESP arm)
     RightShift = Toggle UI visibility
 ]]
 
@@ -9,7 +9,6 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
@@ -30,6 +29,7 @@ local ESP = {
 
 local TriggerHeld = false
 local TriggerState = "DISARMED"
+local clicked = false
 
 ------------------------------------------------------------------
 -- COLOR HELPERS
@@ -91,9 +91,16 @@ local mainContent, debugContent, settingsContent
 local espToggle, stateLabel, killButton
 local svSquare, hueBar, preview
 local applyFill, applyOutline
+local svSelector
+local hueSelector
 
 local function createUI()
-    -- ensure only one UI exists
+
+local function setDragging(state)
+    if mainFrame then
+        mainFrame.Draggable = state
+    end
+end
     local pg = LocalPlayer:FindFirstChild("PlayerGui")
     if pg then
         local old = pg:FindFirstChild("ESP_UI")
@@ -114,7 +121,6 @@ local function createUI()
     mainFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
     mainFrame.BorderSizePixel = 0
     mainFrame.Active = true
-    -- allow normal dragging; we will only lock it while resizing
     mainFrame.Draggable = true
     mainFrame.Parent = screenGui
     Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0,8)
@@ -264,7 +270,6 @@ local function createUI()
     pickerFrame.Parent = settingsContent
     Instance.new("UICorner", pickerFrame).CornerRadius = UDim.new(0,6)
 
-    -- SV square (like htmlcolorcodes)
     svSquare = Instance.new("Frame")
     svSquare.Size = UDim2.new(0,130,0,130)
     svSquare.Position = UDim2.new(0,10,0,10)
@@ -272,7 +277,14 @@ local function createUI()
     svSquare.BorderSizePixel = 0
     svSquare.Parent = pickerFrame
 
-    -- White overlay (left→right)
+    svSelector = Instance.new("Frame")
+    svSelector.Size = UDim2.new(0,8,0,8)
+    svSelector.AnchorPoint = Vector2.new(0.5,0.5)
+    svSelector.BackgroundColor3 = Color3.new(1,1,1)
+    svSelector.BorderSizePixel = 0
+    svSelector.Parent = svSquare
+    Instance.new("UICorner", svSelector).CornerRadius = UDim.new(1,0)
+
     local whiteOverlay = Instance.new("Frame")
     whiteOverlay.Size = UDim2.new(1,0,1,0)
     whiteOverlay.BackgroundTransparency = 1
@@ -291,7 +303,6 @@ local function createUI()
     whiteGrad.Rotation = 0
     whiteGrad.Parent = whiteOverlay
 
-    -- Black overlay (top→bottom)
     local blackOverlay = Instance.new("Frame")
     blackOverlay.Size = UDim2.new(1,0,1,0)
     blackOverlay.BackgroundTransparency = 1
@@ -310,13 +321,19 @@ local function createUI()
     blackGrad.Rotation = 90
     blackGrad.Parent = blackOverlay
 
-    -- Hue bar (rainbow)
     hueBar = Instance.new("Frame")
     hueBar.Size = UDim2.new(0,20,0,130)
     hueBar.Position = UDim2.new(0,150,0,10)
-    hueBar.BackgroundColor3 = Color3.fromRGB(255,0,0)
+    hueBar.BackgroundColor3 = Color3.fromRGB(255,255,255)
     hueBar.BorderSizePixel = 0
     hueBar.Parent = pickerFrame
+
+    hueSelector = Instance.new("Frame")
+    hueSelector.Size = UDim2.new(1,0,0,3)
+    hueSelector.AnchorPoint = Vector2.new(0.5,0.5)
+    hueSelector.BackgroundColor3 = Color3.new(1,1,1)
+    hueSelector.BorderSizePixel = 0
+    hueSelector.Parent = hueBar
 
     local hueGrad = Instance.new("UIGradient")
     hueGrad.Color = ColorSequence.new{
@@ -328,6 +345,7 @@ local function createUI()
         ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255,0,255)),
         ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255,0,0))
     }
+    hueGrad.Transparency = NumberSequence.new(0)
     hueGrad.Rotation = 90
     hueGrad.Parent = hueBar
 
@@ -377,6 +395,12 @@ end
 
 createUI()
 
+local function setDragging(state)
+    if mainFrame then
+        mainFrame.Draggable = state
+    end
+end
+
 ------------------------------------------------------------------
 -- RESIZABLE UI (LOCK DRAG ONLY WHILE RESIZING)
 ------------------------------------------------------------------
@@ -392,7 +416,6 @@ do
             resizing = true
             startMousePos = UserInputService:GetMouseLocation()
             startSize = mainFrame.Size
-            -- temporarily lock dragging while resizing
             oldDraggable = mainFrame.Draggable
             mainFrame.Draggable = false
         end
@@ -402,7 +425,6 @@ do
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             if resizing then
                 resizing = false
-                -- restore previous draggable state
                 if oldDraggable ~= nil then
                     mainFrame.Draggable = oldDraggable
                 else
@@ -428,7 +450,7 @@ do
 end
 
 ------------------------------------------------------------------
--- COLOR PICKER LOGIC (HTMLColorCodes-STYLE)
+-- COLOR PICKER LOGIC (FIXED)
 ------------------------------------------------------------------
 
 local currentHue = 0
@@ -439,68 +461,82 @@ local function updateFromHSV()
     local color = HSVToRGB(currentHue, currentS, currentV)
     preview.BackgroundColor3 = color
     svSquare.BackgroundColor3 = HSVToRGB(currentHue, 1, 1)
+
+    if svSelector then
+        svSelector.Position = UDim2.new(currentS,0,1-currentV,0)
+    end
+
+    if hueSelector then
+        hueSelector.Position = UDim2.new(0.5,0,1-(currentHue/360),0)
+    end
 end
 
 updateFromHSV()
 
+-- FIXED SV SQUARE
 svSquare.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        setDragging(false)
+        
         local moveConn, endConn
+        
         moveConn = UserInputService.InputChanged:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseMovement then
-                local rel = i.Position - svSquare.AbsolutePosition
-                local sx = math.clamp(rel.X / svSquare.AbsoluteSize.X, 0, 1)
-                local sy = math.clamp(rel.Y / svSquare.AbsoluteSize.Y, 0, 1)
+                
+                local mouse = UserInputService:GetMouseLocation()
+                local relX = mouse.X - svSquare.AbsolutePosition.X
+                local relY = mouse.Y - svSquare.AbsolutePosition.Y
+
+                local sx = math.clamp(relX / svSquare.AbsoluteSize.X, 0, 1)
+                local sy = math.clamp(relY / svSquare.AbsoluteSize.Y, 0, 1)
+
                 currentS = sx
                 currentV = 1 - sy
+
                 updateFromHSV()
             end
         end)
+
         endConn = UserInputService.InputEnded:Connect(function(i2)
             if i2.UserInputType == Enum.UserInputType.MouseButton1 then
                 if moveConn then moveConn:Disconnect() end
                 if endConn then endConn:Disconnect() end
+                setDragging(true)
             end
         end)
     end
 end)
 
+-- FIXED HUE BAR
 hueBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        setDragging(false)
+        
         local moveConn, endConn
+        
         moveConn = UserInputService.InputChanged:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseMovement then
-                local rel = i.Position - hueBar.AbsolutePosition
-                local t = math.clamp(rel.Y / hueBar.AbsoluteSize.Y, 0, 1)
-                currentHue = t * 360
+                
+                local mouse = UserInputService:GetMouseLocation()
+                local relY = mouse.Y - hueBar.AbsolutePosition.Y
+
+                local t = math.clamp(relY / hueBar.AbsoluteSize.Y, 0, 1)
+                currentHue = (1 - t) * 360
+
                 updateFromHSV()
             end
         end)
+
         endConn = UserInputService.InputEnded:Connect(function(i2)
             if i2.UserInputType == Enum.UserInputType.MouseButton1 then
                 if moveConn then moveConn:Disconnect() end
                 if endConn then endConn:Disconnect() end
+                setDragging(true)
             end
         end)
     end
 end)
 
-local function UpdateESPColors()
-    for _, highlight in pairs(ESP.Pixels) do
-        highlight.FillColor = ESP.FillColor
-        highlight.OutlineColor = ESP.OutlineColor
-    end
-end
-
-applyFill.MouseButton1Click:Connect(function()
-    ESP.FillColor = preview.BackgroundColor3
-    UpdateESPColors()
-end)
-
-applyOutline.MouseButton1Click:Connect(function()
-    ESP.OutlineColor = preview.BackgroundColor3
-    UpdateESPColors()
-end)
 
 ------------------------------------------------------------------
 -- ESP FUNCTIONS
@@ -538,7 +574,9 @@ end
 
 function ESP:Update()
     if not self.Enabled or not self.Armed then
-        self:ClearAll()
+        if next(self.Pixels) ~= nil then
+            self:ClearAll()
+        end
         return
     end
 
@@ -602,14 +640,11 @@ table.insert(Connections, UserInputService.InputBegan:Connect(function(input, gp
     if gp then return end
 
     if input.KeyCode == Enum.KeyCode.L then
-        -- L now only arms ESP, not the triggerbot logic
         ESP.Armed = not ESP.Armed
-        -- keep TriggerState independent so triggerbot can work without L
     end
 
     if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = true
-        -- when V is held, we are in HOLDING state (scanner active)
         TriggerState = "HOLDING"
     end
 end))
@@ -617,8 +652,10 @@ end))
 table.insert(Connections, UserInputService.InputEnded:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = false
-        -- when V is released, system is ARMED (ready) but not firing
-        TriggerState = "ARMED"
+        if TriggerState ~= "DISARMED" then
+            TriggerState = "ARMED"
+        end
+        clicked = false
     end
 end))
 
@@ -626,12 +663,8 @@ end))
 -- TRIGGERBOT
 ------------------------------------------------------------------
 
-local clicked = false
-
 local function DetectCenterTarget()
-    -- if V is not held, we are not scanning, just ARMED/idle
     if not TriggerHeld then
-        -- if nothing has happened yet, keep DISARMED, otherwise ARMED
         if TriggerState == "DISARMED" then
             TriggerState = "ARMED"
         end
@@ -639,7 +672,6 @@ local function DetectCenterTarget()
         return
     end
 
-    -- HOLDING: V held, scanning for target
     TriggerState = "HOLDING"
 
     if not Camera then
@@ -647,8 +679,9 @@ local function DetectCenterTarget()
         if not Camera then return end
     end
 
-    local centerX = Camera.ViewportSize.X / 2
-    local centerY = Camera.ViewportSize.Y / 2
+    local viewportSize = Camera.ViewportSize
+    local centerX = viewportSize.X / 2
+    local centerY = viewportSize.Y / 2
 
     local ray = Camera:ViewportPointToRay(centerX, centerY)
 
@@ -665,7 +698,6 @@ local function DetectCenterTarget()
         if model then
             local playerHit = Players:GetPlayerFromCharacter(model)
             if playerHit and playerHit ~= LocalPlayer then
-                -- TARGET: enemy detected in center
                 TriggerState = "TARGET"
 
                 if not clicked then
@@ -680,7 +712,6 @@ local function DetectCenterTarget()
         end
     end
 
-    -- still holding, but no valid target
     TriggerState = "HOLDING"
     clicked = false
 end
