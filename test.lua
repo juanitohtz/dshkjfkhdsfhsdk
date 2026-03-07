@@ -821,28 +821,18 @@ local function DetectCenterTarget()
     local centerY = viewportSize.Y / 2
 
     local offsets = {
-    Vector2.new(0,0),
+Vector2.new(0,0),
 
-    Vector2.new(2,0),
-    Vector2.new(-2,0),
-    Vector2.new(0,2),
-    Vector2.new(0,-2),
+Vector2.new(1,0),
+Vector2.new(-1,0),
+Vector2.new(0,1),
+Vector2.new(0,-1),
 
-    Vector2.new(4,0),
-    Vector2.new(-4,0),
-    Vector2.new(0,4),
-    Vector2.new(0,-4),
-
-    Vector2.new(6,0),
-    Vector2.new(-6,0),
-    Vector2.new(0,6),
-    Vector2.new(0,-6),
-
-    Vector2.new(3,3),
-    Vector2.new(-3,3),
-    Vector2.new(3,-3),
-    Vector2.new(-3,-3)
-    }
+Vector2.new(2,0),
+Vector2.new(-2,0),
+Vector2.new(0,2),
+Vector2.new(0,-2)
+}
     
 local result
 
@@ -861,8 +851,14 @@ for _,offset in ipairs(offsets) do
         local model = result.Instance:FindFirstAncestorOfClass("Model")
         local playerHit = model and model:FindFirstChildOfClass("Humanoid") and Players:GetPlayerFromCharacter(model)
 
-        if playerHit and playerHit ~= LocalPlayer then
-            break
+       if playerHit and playerHit ~= LocalPlayer then
+
+    if part.Name ~= "Head"
+    and part.Name ~= "HumanoidRootPart"
+    and part.Name ~= "UpperTorso"
+    and part.Name ~= "Torso" then
+        return
+    end
         else
             result = nil
         end
