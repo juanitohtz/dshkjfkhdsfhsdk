@@ -32,6 +32,38 @@ local TriggerState = "DISARMED"
 local clicked = false
 
 ------------------------------------------------------------------
+-- SETTINGS SYSTEM
+------------------------------------------------------------------
+
+local Settings = {
+    ESPEnabled = false,
+    ESPArmed = false,
+    FillColor = Color3.fromRGB(255,0,0),
+    OutlineColor = Color3.fromRGB(255,255,255),
+    UISizeX = 360,
+    UISizeY = 260
+}
+
+local function SaveSettings()
+    Settings.ESPEnabled = ESP.Enabled
+    Settings.ESPArmed = ESP.Armed
+    Settings.FillColor = ESP.FillColor
+    Settings.OutlineColor = ESP.OutlineColor
+    
+    if mainFrame then
+        Settings.UISizeX = mainFrame.Size.X.Offset
+        Settings.UISizeY = mainFrame.Size.Y.Offset
+    end
+end
+
+local function LoadSettings()
+    ESP.Enabled = Settings.ESPEnabled
+    ESP.Armed = Settings.ESPArmed
+    ESP.FillColor = Settings.FillColor
+    ESP.OutlineColor = Settings.OutlineColor
+end
+
+------------------------------------------------------------------
 -- COLOR HELPERS
 ------------------------------------------------------------------
 
@@ -96,6 +128,10 @@ local hueSelector
 
 local function createUI()
 
+LoadSettings()
+
+espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
+    
 local function setDragging(state)
     if mainFrame then
         mainFrame.Draggable = state
@@ -118,7 +154,7 @@ end
     mainFrame.Name = "MainFrame"
     mainFrame.Size = UDim2.new(0,360,0,260)
     mainFrame.Position = UDim2.new(0,20,0,20)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(17,17,17)
     mainFrame.BorderSizePixel = 0
     mainFrame.Active = true
     mainFrame.Draggable = true
@@ -136,7 +172,7 @@ end
 
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1,0,0,30)
-    title.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    title.BackgroundColor3 = Color3.fromRGB(25,25,25)
     title.Text = "ESP + Triggerbot"
     title.TextColor3 = Color3.fromRGB(255,255,255)
     title.TextScaled = true
@@ -382,6 +418,7 @@ end
     for _,highlight in pairs(ESP.Pixels) do
         highlight.FillColor = ESP.FillColor
     end
+            SaveSettings()
 end)
 
 applyOutline.MouseButton1Click:Connect(function()
@@ -390,6 +427,7 @@ applyOutline.MouseButton1Click:Connect(function()
     for _,highlight in pairs(ESP.Pixels) do
         highlight.OutlineColor = ESP.OutlineColor
     end
+             SaveSettings()
 end)
 
     local function setTab(which)
@@ -465,6 +503,7 @@ do
         local newH = math.max(220, startSize.Y.Offset + dy)
 
         mainFrame.Size = UDim2.new(0,newW,0,newH)
+            SaveSettings()
     end)
 end
 
@@ -647,6 +686,7 @@ end))
 
 table.insert(Connections, espToggle.MouseButton1Click:Connect(function()
     ESP.Enabled = not ESP.Enabled
+            SaveSettings()
     espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
     if not ESP.Enabled then
         ESP:ClearAll()
