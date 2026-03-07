@@ -683,7 +683,17 @@ local function DetectCenterTarget()
     local centerX = viewportSize.X / 2
     local centerY = viewportSize.Y / 2
 
-    local ray = Camera:ViewportPointToRay(centerX, centerY)
+    local offsets = {
+    Vector2.new(0,0),
+    Vector2.new(2,0),
+    Vector2.new(-2,0),
+    Vector2.new(0,2),
+    Vector2.new(0,-2),
+    Vector2.new(4,0),
+    Vector2.new(-4,0),
+    Vector2.new(0,4),
+    Vector2.new(0,-4)
+}
 
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Blacklist
