@@ -93,6 +93,15 @@ local svSquare, hueBar, preview
 local applyFill, applyOutline
 
 local function createUI()
+    -- ensure only one UI exists
+    local pg = LocalPlayer:FindFirstChild("PlayerGui")
+    if pg then
+        local old = pg:FindFirstChild("ESP_UI")
+        if old then
+            old:Destroy()
+        end
+    end
+
     screenGui = Instance.new("ScreenGui")
     screenGui.Name = "ESP_UI"
     screenGui.ResetOnSpawn = false
@@ -234,7 +243,6 @@ local function createUI()
     debugInfo.TextColor3 = Color3.fromRGB(200,200,200)
     debugInfo.TextScaled = true
     debugInfo.TextWrapped = true
-    -- updated to reflect the 3 main stages
     debugInfo.Text = "DISARMED: V not held\nARMED: Ready, V can be held\nHOLDING: V held, scanning\nTARGET: enemy in center"
     debugInfo.Parent = debugContent
 
@@ -399,9 +407,8 @@ do
             local newW = math.max(300, startSize.X.Offset + dx)
             local newH = math.max(220, startSize.Y.Offset + dy)
 
-            -- keep top-left corner fixed while resizing from bottom-right
+            -- only change size; keep position fixed to avoid jumping/glitching
             mainFrame.Size = UDim2.new(0,newW,0,newH)
-            mainFrame.Position = UDim2.new(0, startPos.X - mainFrame.AbsolutePosition.X, 0, startPos.Y - mainFrame.AbsolutePosition.Y)
         end
     end)
 end
