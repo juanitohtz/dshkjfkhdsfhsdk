@@ -50,9 +50,6 @@ local function LoadSettings()
 end
 
 LoadSettings()
-ESP.Enabled = Settings.ESPEnabled
-ESP.FillColor = Color3.new(unpack(Settings.FillColor))
-ESP.OutlineColor = Color3.new(unpack(Settings.OutlineColor))
 
 ------------------------------------------------------------------
 -- STATE
@@ -68,6 +65,25 @@ local ESP = {
     FillColor = Color3.fromRGB(255,0,0),
     OutlineColor = Color3.fromRGB(255,255,255)
 }
+
+-- APPLY SAVED SETTINGS
+ESP.Enabled = Settings.ESPEnabled or false
+
+if Settings.FillColor then
+    ESP.FillColor = Color3.new(
+        Settings.FillColor[1],
+        Settings.FillColor[2],
+        Settings.FillColor[3]
+    )
+end
+
+if Settings.OutlineColor then
+    ESP.OutlineColor = Color3.new(
+        Settings.OutlineColor[1],
+        Settings.OutlineColor[2],
+        Settings.OutlineColor[3]
+    )
+end
 
 local TriggerHeld = false
 local TriggerState = "DISARMED"
@@ -157,16 +173,18 @@ end
     screenGui.Name = "ESP_UI"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    local watermark = Instance.new("TextLabel")
-    watermark.Size = UDim2.new(0,200,0,20)
-    watermark.Position = UDim2.new(0,10,1,-25)
-    watermark.BackgroundTransparency = 1
-    watermark.Text = "made by juanitohtz"
-    watermark.TextColor3 = Color3.fromRGB(255,255,255)
-    watermark.TextStrokeTransparency = 0.5
-    watermark.TextSize = 14
-    watermark.Font = Enum.Font.GothamBold
-    watermark.Parent = screenGui
+    -- WATERMARK
+local watermark = Instance.new("TextLabel")
+watermark.Name = "Watermark"
+watermark.Size = UDim2.new(0,200,0,20)
+watermark.Position = UDim2.new(0,10,1,-25)
+watermark.BackgroundTransparency = 1
+watermark.Text = "made by juanitohtz"
+watermark.TextColor3 = Color3.fromRGB(255,255,255)
+watermark.TextStrokeTransparency = 0.4
+watermark.TextSize = 14
+watermark.Font = Enum.Font.GothamBold
+watermark.Parent = screenGui
 
     mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
@@ -410,6 +428,11 @@ end
     preview.Size = UDim2.new(0,40,0,40)
     preview.Position = UDim2.new(0,150,0,145)
     preview.BackgroundColor3 = ESP.FillColor
+    local h,s,v = RGBToHSV(ESP.FillColor)
+currentHue = h
+currentS = s
+currentV = v
+updateFromHSV()
     preview.BorderSizePixel = 0
     preview.Parent = pickerFrame
     Instance.new("UICorner", preview).CornerRadius = UDim.new(0,4)
@@ -429,6 +452,22 @@ end
     applyOutline.Text = "Apply to Outline"
     applyOutline.Position = UDim2.new(0,230,0,50)
     applyOutline.Parent = settingsContent
+
+    -- SAVE SETTINGS BUTTON
+local saveButton = Instance.new("TextButton")
+saveButton.Size = UDim2.new(0,120,0,28)
+saveButton.Position = UDim2.new(0,230,0,90)
+saveButton.BackgroundColor3 = Color3.fromRGB(60,60,120)
+saveButton.TextColor3 = Color3.fromRGB(255,255,255)
+saveButton.TextScaled = true
+saveButton.Text = "Save Settings"
+saveButton.BorderSizePixel = 0
+saveButton.Parent = settingsContent
+Instance.new("UICorner", saveButton).CornerRadius = UDim.new(0,4)
+
+saveButton.MouseButton1Click:Connect(function()
+    SaveSettings()
+end)
 
     applyFill.MouseButton1Click:Connect(function()
     ESP.FillColor = preview.BackgroundColor3
@@ -719,12 +758,15 @@ end))
 
 table.insert(Connections, espToggle.MouseButton1Click:Connect(function()
     ESP.Enabled = not ESP.Enabled
-            Settings.ESPEnabled = ESP.Enabled
+    Settings.ESPEnabled = ESP.Enabled
+
     espToggle.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
+
     if not ESP.Enabled then
         ESP:ClearAll()
     end
-            SaveSettings()
+
+    SaveSettings()
 end))
 
 ------------------------------------------------------------------
