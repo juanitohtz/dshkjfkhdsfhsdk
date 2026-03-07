@@ -785,14 +785,19 @@ end
             if playerHit and playerHit ~= LocalPlayer then
                 TriggerState = "TARGET"
 
+                if not clicked then
                 mouse1press()
                 task.wait(0.01)
                 mouse1release()
-
+                clicked = true
+                end
+                return
                 return
             end
         end
     end
+
+    clicked = false
 
     TriggerState = "HOLDING"
     clicked = false
