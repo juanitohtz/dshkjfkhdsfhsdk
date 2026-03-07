@@ -1,7 +1,7 @@
 --[[ 
     ESP + Triggerbot (L toggle, V hold) + Kill Button + ESP Settings (HTMLColorCodes-style) + Resizable UI
-    L = Arm/Disarm system (ESP + Trigger)
-    Hold V = Triggerbot
+    L = Arm/Disarm ESP system
+    Hold V = Triggerbot (independent of ESP arm)
     RightShift = Toggle UI visibility
 ]]
 
@@ -9,7 +9,6 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
@@ -30,6 +29,7 @@ local ESP = {
 
 local TriggerHeld = false
 local TriggerState = "DISARMED"
+local clicked = false
 
 ------------------------------------------------------------------
 -- COLOR HELPERS
@@ -91,8 +91,24 @@ local mainContent, debugContent, settingsContent
 local espToggle, stateLabel, killButton
 local svSquare, hueBar, preview
 local applyFill, applyOutline
+local svSelector
+local hueSelector
 
 local function createUI()
+
+local function setDragging(state)
+    if mainFrame then
+        mainFrame.Draggable = state
+    end
+end
+    local pg = LocalPlayer:FindFirstChild("PlayerGui")
+    if pg then
+        local old = pg:FindFirstChild("ESP_UI")
+        if old then
+            old:Destroy()
+        end
+    end
+
     screenGui = Instance.new("ScreenGui")
     screenGui.Name = "ESP_UI"
     screenGui.ResetOnSpawn = false
@@ -234,7 +250,7 @@ local function createUI()
     debugInfo.TextColor3 = Color3.fromRGB(200,200,200)
     debugInfo.TextScaled = true
     debugInfo.TextWrapped = true
-    debugInfo.Text = "DISARMED: L off\nARMED: L on\nHOLDING: L on + V held\nLOCKED & FIRING: enemy in center"
+    debugInfo.Text = "DISARMED: V not held\nARMED: Ready, V can be held\nHOLDING: V held, scanning\nTARGET: enemy in center"
     debugInfo.Parent = debugContent
 
     -- Settings content
@@ -254,7 +270,6 @@ local function createUI()
     pickerFrame.Parent = settingsContent
     Instance.new("UICorner", pickerFrame).CornerRadius = UDim.new(0,6)
 
-    -- SV square (like htmlcolorcodes)
     svSquare = Instance.new("Frame")
     svSquare.Size = UDim2.new(0,130,0,130)
     svSquare.Position = UDim2.new(0,10,0,10)
@@ -262,7 +277,14 @@ local function createUI()
     svSquare.BorderSizePixel = 0
     svSquare.Parent = pickerFrame
 
-    -- White overlay (left→right)
+    svSelector = Instance.new("Frame")
+    svSelector.Size = UDim2.new(0,8,0,8)
+    svSelector.AnchorPoint = Vector2.new(0.5,0.5)
+    svSelector.BackgroundColor3 = Color3.new(1,1,1)
+    svSelector.BorderSizePixel = 0
+    svSelector.Parent = svSquare
+    Instance.new("UICorner", svSelector).CornerRadius = UDim.new(1,0)
+
     local whiteOverlay = Instance.new("Frame")
     whiteOverlay.Size = UDim2.new(1,0,1,0)
     whiteOverlay.BackgroundTransparency = 1
@@ -281,7 +303,6 @@ local function createUI()
     whiteGrad.Rotation = 0
     whiteGrad.Parent = whiteOverlay
 
-    -- Black overlay (top→bottom)
     local blackOverlay = Instance.new("Frame")
     blackOverlay.Size = UDim2.new(1,0,1,0)
     blackOverlay.BackgroundTransparency = 1
@@ -300,13 +321,19 @@ local function createUI()
     blackGrad.Rotation = 90
     blackGrad.Parent = blackOverlay
 
-    -- Hue bar (rainbow)
     hueBar = Instance.new("Frame")
     hueBar.Size = UDim2.new(0,20,0,130)
     hueBar.Position = UDim2.new(0,150,0,10)
-    hueBar.BackgroundColor3 = Color3.fromRGB(255,0,0)
+    hueBar.BackgroundColor3 = Color3.fromRGB(255,255,255)
     hueBar.BorderSizePixel = 0
     hueBar.Parent = pickerFrame
+
+    hueSelector = Instance.new("Frame")
+    hueSelector.Size = UDim2.new(1,0,0,3)
+    hueSelector.AnchorPoint = Vector2.new(0.5,0.5)
+    hueSelector.BackgroundColor3 = Color3.new(1,1,1)
+    hueSelector.BorderSizePixel = 0
+    hueSelector.Parent = hueBar
 
     local hueGrad = Instance.new("UIGradient")
     hueGrad.Color = ColorSequence.new{
@@ -318,6 +345,7 @@ local function createUI()
         ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255,0,255)),
         ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255,0,0))
     }
+    hueGrad.Transparency = NumberSequence.new(0)
     hueGrad.Rotation = 90
     hueGrad.Parent = hueBar
 
@@ -367,44 +395,62 @@ end
 
 createUI()
 
+local function setDragging(state)
+    if mainFrame then
+        mainFrame.Draggable = state
+    end
+end
+
 ------------------------------------------------------------------
--- RESIZABLE UI
+-- RESIZABLE UI (LOCK DRAG ONLY WHILE RESIZING)
 ------------------------------------------------------------------
 
 do
     local resizing = false
-    local startPos, startSize
+    local startMousePos
+    local startSize
+    local oldDraggable
 
     resizeHandle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             resizing = true
-            startPos = UserInputService:GetMouseLocation()
+            startMousePos = UserInputService:GetMouseLocation()
             startSize = mainFrame.Size
+            oldDraggable = mainFrame.Draggable
+            mainFrame.Draggable = false
         end
     end)
 
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            resizing = false
+            if resizing then
+                resizing = false
+                if oldDraggable ~= nil then
+                    mainFrame.Draggable = oldDraggable
+                else
+                    mainFrame.Draggable = true
+                end
+            end
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
-        if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local currentPos = UserInputService:GetMouseLocation()
-            local dx = currentPos.X - startPos.X
-            local dy = currentPos.Y - startPos.Y
+        if not resizing then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
 
-            local newW = math.max(300, startSize.X.Offset + dx)
-            local newH = math.max(220, startSize.Y.Offset + dy)
+        local currentPos = UserInputService:GetMouseLocation()
+        local dx = currentPos.X - startMousePos.X
+        local dy = currentPos.Y - startMousePos.Y
 
-            mainFrame.Size = UDim2.new(0,newW,0,newH)
-        end
+        local newW = math.max(300, startSize.X.Offset + dx)
+        local newH = math.max(220, startSize.Y.Offset + dy)
+
+        mainFrame.Size = UDim2.new(0,newW,0,newH)
     end)
 end
 
 ------------------------------------------------------------------
--- COLOR PICKER LOGIC (HTMLColorCodes-STYLE)
+-- COLOR PICKER LOGIC (FIXED)
 ------------------------------------------------------------------
 
 local currentHue = 0
@@ -415,68 +461,82 @@ local function updateFromHSV()
     local color = HSVToRGB(currentHue, currentS, currentV)
     preview.BackgroundColor3 = color
     svSquare.BackgroundColor3 = HSVToRGB(currentHue, 1, 1)
+
+    if svSelector then
+        svSelector.Position = UDim2.new(currentS,0,1-currentV,0)
+    end
+
+    if hueSelector then
+        hueSelector.Position = UDim2.new(0.5,0,1-(currentHue/360),0)
+    end
 end
 
 updateFromHSV()
 
+-- FIXED SV SQUARE
 svSquare.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        setDragging(false)
+        
         local moveConn, endConn
+        
         moveConn = UserInputService.InputChanged:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseMovement then
-                local rel = i.Position - svSquare.AbsolutePosition
-                local sx = math.clamp(rel.X / svSquare.AbsoluteSize.X, 0, 1)
-                local sy = math.clamp(rel.Y / svSquare.AbsoluteSize.Y, 0, 1)
+                
+                local mouse = UserInputService:GetMouseLocation()
+                local relX = mouse.X - svSquare.AbsolutePosition.X
+                local relY = mouse.Y - svSquare.AbsolutePosition.Y
+
+                local sx = math.clamp(relX / svSquare.AbsoluteSize.X, 0, 1)
+                local sy = math.clamp(relY / svSquare.AbsoluteSize.Y, 0, 1)
+
                 currentS = sx
                 currentV = 1 - sy
+
                 updateFromHSV()
             end
         end)
+
         endConn = UserInputService.InputEnded:Connect(function(i2)
             if i2.UserInputType == Enum.UserInputType.MouseButton1 then
                 if moveConn then moveConn:Disconnect() end
                 if endConn then endConn:Disconnect() end
+                setDragging(true)
             end
         end)
     end
 end)
 
+-- FIXED HUE BAR
 hueBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        setDragging(false)
+        
         local moveConn, endConn
+        
         moveConn = UserInputService.InputChanged:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseMovement then
-                local rel = i.Position - hueBar.AbsolutePosition
-                local t = math.clamp(rel.Y / hueBar.AbsoluteSize.Y, 0, 1)
-                currentHue = t * 360
+                
+                local mouse = UserInputService:GetMouseLocation()
+                local relY = mouse.Y - hueBar.AbsolutePosition.Y
+
+                local t = math.clamp(relY / hueBar.AbsoluteSize.Y, 0, 1)
+                currentHue = (1 - t) * 360
+
                 updateFromHSV()
             end
         end)
+
         endConn = UserInputService.InputEnded:Connect(function(i2)
             if i2.UserInputType == Enum.UserInputType.MouseButton1 then
                 if moveConn then moveConn:Disconnect() end
                 if endConn then endConn:Disconnect() end
+                setDragging(true)
             end
         end)
     end
 end)
 
-local function UpdateESPColors()
-    for _, highlight in pairs(ESP.Pixels) do
-        highlight.FillColor = ESP.FillColor
-        highlight.OutlineColor = ESP.OutlineColor
-    end
-end
-
-applyFill.MouseButton1Click:Connect(function()
-    ESP.FillColor = preview.BackgroundColor3
-    UpdateESPColors()
-end)
-
-applyOutline.MouseButton1Click:Connect(function()
-    ESP.OutlineColor = preview.BackgroundColor3
-    UpdateESPColors()
-end)
 
 ------------------------------------------------------------------
 -- ESP FUNCTIONS
@@ -514,7 +574,9 @@ end
 
 function ESP:Update()
     if not self.Enabled or not self.Armed then
-        self:ClearAll()
+        if next(self.Pixels) ~= nil then
+            self:ClearAll()
+        end
         return
     end
 
@@ -571,7 +633,7 @@ table.insert(Connections, espToggle.MouseButton1Click:Connect(function()
 end))
 
 ------------------------------------------------------------------
--- INPUT: L (ARM), V (HOLD)
+-- INPUT: L (ARM FOR ESP), V (HOLD FOR TRIGGERBOT)
 ------------------------------------------------------------------
 
 table.insert(Connections, UserInputService.InputBegan:Connect(function(input, gp)
@@ -579,30 +641,21 @@ table.insert(Connections, UserInputService.InputBegan:Connect(function(input, gp
 
     if input.KeyCode == Enum.KeyCode.L then
         ESP.Armed = not ESP.Armed
-        if ESP.Armed then
-            TriggerState = "ARMED"
-        else
-            TriggerState = "DISARMED"
-            ESP:ClearAll()
-        end
     end
 
     if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = true
-        if ESP.Armed then
-            TriggerState = "HOLDING"
-        end
+        TriggerState = "HOLDING"
     end
 end))
 
 table.insert(Connections, UserInputService.InputEnded:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.V then
         TriggerHeld = false
-        if ESP.Armed then
+        if TriggerState ~= "DISARMED" then
             TriggerState = "ARMED"
-        else
-            TriggerState = "DISARMED"
         end
+        clicked = false
     end
 end))
 
@@ -610,17 +663,11 @@ end))
 -- TRIGGERBOT
 ------------------------------------------------------------------
 
-local clicked = false
-
 local function DetectCenterTarget()
-    if not ESP.Armed then
-        TriggerState = "DISARMED"
-        clicked = false
-        return
-    end
-
     if not TriggerHeld then
-        TriggerState = "ARMED"
+        if TriggerState == "DISARMED" then
+            TriggerState = "ARMED"
+        end
         clicked = false
         return
     end
@@ -632,8 +679,9 @@ local function DetectCenterTarget()
         if not Camera then return end
     end
 
-    local centerX = Camera.ViewportSize.X / 2
-    local centerY = Camera.ViewportSize.Y / 2
+    local viewportSize = Camera.ViewportSize
+    local centerX = viewportSize.X / 2
+    local centerY = viewportSize.Y / 2
 
     local ray = Camera:ViewportPointToRay(centerX, centerY)
 
@@ -650,7 +698,7 @@ local function DetectCenterTarget()
         if model then
             local playerHit = Players:GetPlayerFromCharacter(model)
             if playerHit and playerHit ~= LocalPlayer then
-                TriggerState = "LOCKED & FIRING"
+                TriggerState = "TARGET"
 
                 if not clicked then
                     clicked = true
