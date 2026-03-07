@@ -93,6 +93,12 @@ local svSquare, hueBar, preview
 local applyFill, applyOutline
 
 local function createUI()
+
+local function setDragging(state)
+    if mainFrame then
+        mainFrame.Draggable = state
+    end
+end
     local pg = LocalPlayer:FindFirstChild("PlayerGui")
     if pg then
         local old = pg:FindFirstChild("ESP_UI")
@@ -372,6 +378,12 @@ end
 
 createUI()
 
+local function setDragging(state)
+    if mainFrame then
+        mainFrame.Draggable = state
+    end
+end
+
 ------------------------------------------------------------------
 -- RESIZABLE UI (LOCK DRAG ONLY WHILE RESIZING)
 ------------------------------------------------------------------
@@ -439,6 +451,7 @@ updateFromHSV()
 -- FIXED SV SQUARE
 svSquare.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        setDragging(false)
         
         local moveConn, endConn
         
@@ -463,6 +476,7 @@ svSquare.InputBegan:Connect(function(input)
             if i2.UserInputType == Enum.UserInputType.MouseButton1 then
                 if moveConn then moveConn:Disconnect() end
                 if endConn then endConn:Disconnect() end
+                setDragging(true)
             end
         end)
     end
@@ -471,6 +485,7 @@ end)
 -- FIXED HUE BAR
 hueBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        setDragging(false)
         
         local moveConn, endConn
         
@@ -481,7 +496,7 @@ hueBar.InputBegan:Connect(function(input)
                 local relY = mouse.Y - hueBar.AbsolutePosition.Y
 
                 local t = math.clamp(relY / hueBar.AbsoluteSize.Y, 0, 1)
-                currentHue = math.clamp(t * 360, 0, 360)
+                currentHue = (1 - t) * 360
 
                 updateFromHSV()
             end
@@ -491,6 +506,7 @@ hueBar.InputBegan:Connect(function(input)
             if i2.UserInputType == Enum.UserInputType.MouseButton1 then
                 if moveConn then moveConn:Disconnect() end
                 if endConn then endConn:Disconnect() end
+                setDragging(true)
             end
         end)
     end
